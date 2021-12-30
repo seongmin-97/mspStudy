@@ -13,12 +13,12 @@ int rotate270(void);
 int mirror(void);
 int flip(void);
 
-int main(void) {
-
-	getUserInput();
-
-	return 0;
-}
+//int main(void) {
+//
+//	getUserInput();
+//
+//	return 0;
+//}
 
 int getUserInput(void) {
 
