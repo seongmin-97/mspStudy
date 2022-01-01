@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="homework1.c" />
+    <ClCompile Include="homewokr2.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="lena.img" />
