@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <math.h>
 
 // Scailing 매개변수는 순서대로
 // 입력 파일 경로, 출력 파일 경로, 입력 가로 픽셀 수, 입력 세로 픽셀 수, 출력 가로 픽셀 수, 출력 세로 픽셀 수 
@@ -32,14 +33,15 @@ int lena512to298UsingLPF(int, int);
 
 int main(void) {
 
-	// mode 1은 S&H
+	// mode 2는 Bilinear
+	int mode = 2;
 
-	lena512to1000to512(1);
-	lena512to400to512UsingLPF(7, 1);
-	lena512to400to512NoLPF(1);
-	lena512to945(1);
-	lena512to298UsingLPF(7, 1);
-	lena512to298NoLPF(1);
+	lena512to1000to512(mode);
+	lena512to400to512UsingLPF(9, mode);
+	lena512to400to512NoLPF(mode);
+	lena512to945(mode);
+	lena512to298UsingLPF(9, mode);
+	lena512to298NoLPF(mode);
 
 	return 0;
 }
@@ -122,7 +124,7 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 
 	input_image = (unsigned char*)malloc(sizeof(unsigned char) * input_width * input_height);
 	mid_image = (unsigned char*)malloc(sizeof(unsigned char) * output_width * input_height);
-	result_image = (unsigned char*)malloc(sizeof(unsigned) * output_width * output_height);
+	result_image = (unsigned char*)malloc(sizeof(unsigned char) * output_width * output_height);
 
 	// 에러 발생 시
 	if (input_image == NULL || mid_image == NULL || result_image == NULL) {
@@ -144,17 +146,16 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 
 
 	// scailing
+	// S&H
 	if (mode == 1) {
-
 		// LPF 사용하는 경우
 		if (LPF_tap_num > 0) {
 			LPF(input_image, input_width, input_height, LPF_tap_num, 1);
 		}
-
 		// 가로 방향
 		for (int row = 0; row < input_height; row++) {
 			for (int column = 0; column < output_width; column++) {
-				*(mid_image + row * output_width + column) = *(input_image + row * input_width + (int) (column * reciprocal_scail_ratio_width));
+				*(mid_image + row * output_width + column) = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
 			}
 		}
 
@@ -162,14 +163,48 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 		if (LPF_tap_num > 0) {
 			LPF(mid_image, output_width, input_height, LPF_tap_num, 2);
 		}
-		
+
 		// 세로 방향
 		for (int row = 0; row < output_height; row++) {
 			for (int column = 0; column < output_width; column++) {
-				*(result_image + row * output_width + column) = *(mid_image + (int) (row * reciprocal_scail_ratio_height) * output_width + column);
+				*(result_image + row * output_width + column) = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
 			}
 		}
 	}
+	// Bilinear
+	else if (mode == 2) {
+		// LPF 사용하는 경우
+		if (LPF_tap_num > 0) {
+			LPF(input_image, input_width, input_height, LPF_tap_num, 1);
+		}
+		// 가로 방향
+		for (int row = 0; row < input_height; row++) {
+			for (int column = 0; column < output_width; column++) {
+				int value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+				int value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+				double t = column * reciprocal_scail_ratio_width - floor(column * reciprocal_scail_ratio_width);
+
+				*(mid_image + row * output_width + column) = (1 - t) * value_x + t * value_x_plus_1;
+				
+			}
+		}
+		// LPF 사용하는 경우
+		if (LPF_tap_num > 0) {
+			LPF(mid_image, output_width, input_height, LPF_tap_num, 2);
+		}
+
+		// 세로 방향
+		for (int row = 0; row < output_height; row++) {
+			for (int column = 0; column < output_width; column++) {
+				int value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+				int value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+				double t = row * reciprocal_scail_ratio_height - floor(row * reciprocal_scail_ratio_height);
+
+				*(result_image + row * output_width + column) = (1 - t) * value_x + t * value_x_plus_1;			
+			}
+		}
+	}
+
 
 	// 결과 저장
 	output_file = fopen(output_filepath, "wb");
@@ -199,7 +234,7 @@ int LPF(unsigned char * input_image, int width, int height, int tap_num, int mod
 	filter = (float*)malloc(sizeof(float) * tap_num);
 	result_image = (unsigned char*)malloc(sizeof(unsigned char) * width * height);
 
-	// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 7 tap, Hamming
+	// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 9 tap, Hamming
 	if (tap_num == 7) {
 		*(filter) = -0.0087;
 		*(filter + 1) = 0.0000;
@@ -209,7 +244,16 @@ int LPF(unsigned char * input_image, int width, int height, int tap_num, int mod
 		*(filter + 5) = 0.0000;
 		*(filter + 6) = -0.0087;
 	}
-	else {
+	else if (tap_num == 9) {
+		*(filter) = 0.0000;
+		*(filter + 1) = -0.0227;
+		*(filter + 2) = 0.0000;
+		*(filter + 3) = 0.2740;
+		*(filter + 4) = 0.4974;
+		*(filter + 5) = 0.2740;
+		*(filter + 6) = 0.0000;
+		*(filter + 7) = -0.0227;
+		*(filter + 8) = 0.0000;
 		return 0;
 	}
 
