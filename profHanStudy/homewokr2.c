@@ -8,39 +8,38 @@
 
 // Scailing 매개변수는 순서대로
 // 입력 파일 경로, 출력 파일 경로, 입력 가로 픽셀 수, 입력 세로 픽셀 수, 출력 가로 픽셀 수, 출력 세로 픽셀 수 
-// LPF 탭 수(0 <= 사용x, 양수 입력은 사용), mode(1 : S&H, 2 : Bilinear, 3 : B-spline, 4 : Cubic Conv)
-int Scailing(char*, char*, int, int, int, int, int, int);
+// LPF 탭 수(0 <= 사용x, 양수 입력은 사용), cut_off frequency(소숫점 아래를 두 자리 정수로), mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
+int Scailing(char*, char*, int, int, int, int, int, int, int);
 
-// LPF 함수, 가로 길이, 세로 길이, LPF 탭 수, 모드 (1 : 가로 방향, 2 : 세로 방향)
-// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 7 tap, Hamming (7탭)
-int LPF(unsigned char*, int, int, int, int);
+// LPF 함수, 가로 길이, 세로 길이, LPF 탭 수, cut_off frequency(소숫점 아래를 두 자리 정수로) 모드 (1 : 가로 방향, 2 : 세로 방향)
+int LPF(unsigned char*, int, int, int, int, int);
 
 // 원본 이미지, 예측 이미지, 가로 사이즈 (두 이미지가 정사각형일 때만 사용 가능)
 double MSE(unsigned char*, unsigned char*, int);
 // 이미지 파일 입출력, MSE 결과 프린트까지 한 번에
 int calculate_image_MSE(char *, char *);
 
-// mode(1 : S&H, 2 : Bilinear, 3 : B-spline, 4 : Cubic Conv)
+// mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
 int lena512to1000to512(int);
 int lena512to400to512NoLPF(int);
 int lena512to945(int);
 int lena512to298NoLPF(int);
 
-// LPF tap 수, mode(1 : S&H, 2 : Bilinear, 3 : B-spline, 4 : Cubic Conv)
+// LPF tap 수, mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
 int lena512to400to512UsingLPF(int, int);
 int lena512to298UsingLPF(int, int);
 
 
 int main(void) {
 
-	// mode 2는 Bilinear
-	int mode = 2;
+	// mode 3은 Cubic Convolution
+	int mode = 3;
 
 	lena512to1000to512(mode);
-	lena512to400to512UsingLPF(9, mode);
+	lena512to400to512UsingLPF(11, mode);
 	lena512to400to512NoLPF(mode);
 	lena512to945(mode);
-	lena512to298UsingLPF(9, mode);
+	lena512to298UsingLPF(11, mode);
 	lena512to298NoLPF(mode);
 
 	return 0;
@@ -48,8 +47,8 @@ int main(void) {
 
 int lena512to1000to512(int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo1000.img", WIDTH, HEIGHT, 1000, 1000, 0, mode);
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo1000.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena1000To512.img", 1000, 1000, WIDTH, HEIGHT, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo1000.img", WIDTH, HEIGHT, 1000, 1000, 0, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo1000.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena1000To512.img", 1000, 1000, WIDTH, HEIGHT, 0, 0, mode);
 
 	printf("lena 이미지를 1000x1000으로 키운 후 이를 다시 512x512로 줄였습니다. (lena1000To512.img)\n");
 
@@ -60,8 +59,8 @@ int lena512to1000to512(int mode) {
 
 int lena512to400to512NoLPF(int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400.img", WIDTH, HEIGHT, 400, 400, 0, mode);
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena400To512.img", 400, 400, WIDTH, HEIGHT, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400.img", WIDTH, HEIGHT, 400, 400, 0, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena400To512.img", 400, 400, WIDTH, HEIGHT, 0, 0, mode);
 
 	printf("lena 이미지를 400x400으로 줄인 후 이를 다시 512x512로 늘렸습니다. (lena400To512.img)\n");
 
@@ -72,8 +71,8 @@ int lena512to400to512NoLPF(int mode) {
 
 int lena512to400to512UsingLPF(int LPF_tap_num, int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400LPF.img", WIDTH, HEIGHT, 400, 400, LPF_tap_num, mode);
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400LPF.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena400To512LPF.img", 400, 400, WIDTH, HEIGHT, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400LPF.img", WIDTH, HEIGHT, 400, 400, LPF_tap_num, 40, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo400LPF.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena400To512LPF.img", 400, 400, WIDTH, HEIGHT, 0, 0, mode);
 
 	printf("lena 이미지를 LPF를 사용한 후 400x400으로 줄인 후 이를 다시 512x512로 늘렸습니다. (lena400To512LPF.img)\n");
 
@@ -84,7 +83,7 @@ int lena512to400to512UsingLPF(int LPF_tap_num, int mode) {
 
 int lena512to945(int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo945.img", WIDTH, HEIGHT, 945, 945, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo945.img", WIDTH, HEIGHT, 945, 945, 0, 0, mode);
 
 	printf("lena 이미지를 945x945으로 늘렸습니다. (lenaTo945.img)\n");
 
@@ -93,7 +92,7 @@ int lena512to945(int mode) {
 
 int lena512to298NoLPF(int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo298.img", WIDTH, HEIGHT, 298, 298, 0, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo298.img", WIDTH, HEIGHT, 298, 298, 0, 0, mode);
 
 	printf("lena 이미지를 298x298으로 줄였습니다. (lenaTo298.img)\n");
 
@@ -102,14 +101,14 @@ int lena512to298NoLPF(int mode) {
 
 int lena512to298UsingLPF(int LPF_tap_num, int mode) {
 
-	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo298LPF.img", WIDTH, HEIGHT, 298, 298, LPF_tap_num, mode);
+	Scailing("C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lena.img", "C:\\Users\\korea_1\\profHanStudy\\profHanStudy\\lenaTo298LPF.img", WIDTH, HEIGHT, 298, 298, LPF_tap_num, 25, mode);
 
 	printf("lena 이미지를 LPF를 사용한 후 298x298으로 줄였습니다. (lenaTo298LPF.img)\n");
 
 	return 1;
 }
 
-int Scailing(char* input_filepath, char* output_filepath, int input_width, int input_height, int output_width, int output_height, int LPF_tap_num, int mode) {
+int Scailing(char* input_filepath, char* output_filepath, int input_width, int input_height, int output_width, int output_height, int LPF_tap_num, int cut_off, int mode) {
 
 	// 필요한 변수 선언
 	float reciprocal_scail_ratio_width = (float) input_width / (float) output_width;
@@ -150,7 +149,7 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 	if (mode == 1) {
 		// LPF 사용하는 경우
 		if (LPF_tap_num > 0) {
-			LPF(input_image, input_width, input_height, LPF_tap_num, 1);
+			LPF(input_image, input_width, input_height, LPF_tap_num, cut_off, 1);
 		}
 		// 가로 방향
 		for (int row = 0; row < input_height; row++) {
@@ -161,7 +160,7 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 
 		// LPF 사용하는 경우
 		if (LPF_tap_num > 0) {
-			LPF(mid_image, output_width, input_height, LPF_tap_num, 2);
+			LPF(mid_image, output_width, input_height, LPF_tap_num, cut_off, 2);
 		}
 
 		// 세로 방향
@@ -175,32 +174,151 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 	else if (mode == 2) {
 		// LPF 사용하는 경우
 		if (LPF_tap_num > 0) {
-			LPF(input_image, input_width, input_height, LPF_tap_num, 1);
+			LPF(input_image, input_width, input_height, LPF_tap_num, cut_off, 1);
 		}
+
 		// 가로 방향
 		for (int row = 0; row < input_height; row++) {
 			for (int column = 0; column < output_width; column++) {
-				int value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
-				int value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
-				double t = column * reciprocal_scail_ratio_width - floor(column * reciprocal_scail_ratio_width);
+				unsigned char value_x, value_x_plus_1;
+				double t;
+				if ((int)(column * reciprocal_scail_ratio_width) + 1 > input_width - 1) {
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) - 1);
+					t = column * reciprocal_scail_ratio_width - (int) (column * reciprocal_scail_ratio_width);
 
-				*(mid_image + row * output_width + column) = (1 - t) * value_x + t * value_x_plus_1;
-				
+					*(mid_image + row * output_width + column) = round((1 - t) * value_x + t * value_x_plus_1);
+				}
+				else {
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+					t = column * reciprocal_scail_ratio_width - (int) (column * reciprocal_scail_ratio_width);
+
+					*(mid_image + row * output_width + column) = round((1 - t) * value_x + t * value_x_plus_1);
+				}
 			}
 		}
 		// LPF 사용하는 경우
 		if (LPF_tap_num > 0) {
-			LPF(mid_image, output_width, input_height, LPF_tap_num, 2);
+			LPF(mid_image, output_width, input_height, LPF_tap_num, cut_off, 2);
 		}
 
 		// 세로 방향
 		for (int row = 0; row < output_height; row++) {
 			for (int column = 0; column < output_width; column++) {
-				int value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
-				int value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
-				double t = row * reciprocal_scail_ratio_height - floor(row * reciprocal_scail_ratio_height);
+				unsigned char value_x, value_x_plus_1;
+				double t;
+				if ((int)(row * reciprocal_scail_ratio_height) + 1 > input_height - 1) {
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int) (row * reciprocal_scail_ratio_height);
 
-				*(result_image + row * output_width + column) = (1 - t) * value_x + t * value_x_plus_1;			
+					*(result_image + row * output_width + column) = round((1 - t) * value_x + t * value_x_plus_1);
+				}
+				else {
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int) (row * reciprocal_scail_ratio_height);
+
+					*(result_image + row * output_width + column) = round((1 - t) * value_x + t * value_x_plus_1);
+				}		
+			}
+		}
+	}
+	// Cubic Convolution
+	else if (mode == 3) {
+		// alpha 값은 -0.5
+		float a = -0.5;
+		// LPF 사용하는 경우
+		if (LPF_tap_num > 0) {
+			LPF(input_image, input_width, input_height, LPF_tap_num, cut_off, 1);
+		}
+
+		// 가로 방향
+		for (int row = 0; row < input_height; row++) {
+			for (int column = 0; column < output_width; column++) {
+				unsigned char value_x_minus_1, value_x, value_x_plus_1, value_x_plus_2;
+				double t;
+				// 좌측에서 value_x_minus_1이 넘어가는 경우
+				if ((int)(column * reciprocal_scail_ratio_height) - 1 < 0) {
+					value_x_minus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+					value_x_plus_2 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 2);
+					t = column * reciprocal_scail_ratio_width - (int)(column * reciprocal_scail_ratio_width);
+				} // 우측에서 value_x_plus_2만 넘어가는 경우
+				else if ((int)(column * reciprocal_scail_ratio_height) + 2 > input_width - 1) {
+					value_x_minus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) - 1);
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+					value_x_plus_2 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					t = column * reciprocal_scail_ratio_width - (int)(column * reciprocal_scail_ratio_width);
+				} // 우측에서 value_x_plus_1과 2 모두 넘어가는 경우
+				else if ((int)(column * reciprocal_scail_ratio_height) + 1 > input_width - 1) {
+					value_x_minus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) - 1);
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_2 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) - 1);
+					t = column * reciprocal_scail_ratio_width - (int)(column * reciprocal_scail_ratio_width);
+				}
+				else {
+					value_x_minus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) - 1);
+					value_x = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width));
+					value_x_plus_1 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 1);
+					value_x_plus_2 = *(input_image + row * input_width + (int)(column * reciprocal_scail_ratio_width) + 2);
+					t = column * reciprocal_scail_ratio_width - (int)(column * reciprocal_scail_ratio_width);
+				}
+
+				*(mid_image + row * output_width + column) = round(value_x_minus_1 * (a * pow(t, 3) - 2 * a * pow(t, 2) + a * t)
+																+ value_x * ((a + 2) * pow(t, 3) - (a + 3) * pow(t, 2) + 1)
+																+ value_x_plus_1 * (-(a + 2) * pow(t, 3) + (2*a + 3) * pow(t, 2) - a * t)
+																+ value_x_plus_2 * (-a * pow(t,3) + a * pow(t, 2)));
+			}
+		}
+		// LPF 사용하는 경우
+		if (LPF_tap_num > 0) {
+			LPF(mid_image, output_width, input_height, LPF_tap_num, cut_off, 2);
+		}
+
+		// 세로 방향
+		for (int row = 0; row < output_height; row++) {
+			for (int column = 0; column < output_width; column++) {
+				unsigned char value_x_minus_1, value_x, value_x_plus_1, value_x_plus_2;
+				double t;
+				// 좌측에서 value_x_minus_1이 넘어가는 경우
+				if ((int) (row * reciprocal_scail_ratio_height) - 1 < 0) {
+					value_x_minus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					value_x_plus_2 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 2) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int)(row * reciprocal_scail_ratio_height);
+				} // 우측에서 value_x_plus_2만 넘어가는 경우
+				else if ((int) (row * reciprocal_scail_ratio_height) + 2 > input_height - 1) {
+					value_x_minus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) - 1) * output_width + column);
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					value_x_plus_2 = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int)(row * reciprocal_scail_ratio_height);
+				} // 우측에서 value_x_plus_1과 2 모두 넘어가는 경우
+				else if ((int)(row * reciprocal_scail_ratio_height) + 1 > input_height - 1) {
+					value_x_minus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) - 1) * output_width + column);
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_2 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) - 1) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int)(row * reciprocal_scail_ratio_height);
+				}
+				else {
+					value_x_minus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) - 1) * output_width + column);
+					value_x = *(mid_image + (int)(row * reciprocal_scail_ratio_height) * output_width + column);
+					value_x_plus_1 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 1) * output_width + column);
+					value_x_plus_2 = *(mid_image + ((int)(row * reciprocal_scail_ratio_height) + 2) * output_width + column);
+					t = row * reciprocal_scail_ratio_height - (int)(row * reciprocal_scail_ratio_height);
+				}
+
+				*(result_image + row * output_width + column) = round(value_x_minus_1 * (a * pow(t, 3) - 2 * a * pow(t, 2) + a * t)
+																	+ value_x * ((a + 2) * pow(t, 3) - (a + 3) * pow(t, 2) + 1)
+																	+ value_x_plus_1 * (-(a + 2) * pow(t, 3) + (2 * a + 3) * pow(t, 2) - a * t)
+																	+ value_x_plus_2 * (-a * pow(t, 3) + a * pow(t, 2)));
 			}
 		}
 	}
@@ -224,8 +342,7 @@ int Scailing(char* input_filepath, char* output_filepath, int input_width, int i
 	return 1;
 }
 
-int LPF(unsigned char * input_image, int width, int height, int tap_num, int mode) {
-
+int LPF(unsigned char * input_image, int width, int height, int tap_num, int cut_off, int mode) {
 	//필요한 변수 생성
 	int location_doing_convolution;
 	float* filter = NULL;
@@ -234,7 +351,8 @@ int LPF(unsigned char * input_image, int width, int height, int tap_num, int mod
 	filter = (float*)malloc(sizeof(float) * tap_num);
 	result_image = (unsigned char*)malloc(sizeof(unsigned char) * width * height);
 
-	// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 9 tap, Hamming
+	float* mid_tap = filter + (tap_num - 1) / 2;
+	// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 7 tap, Hamming
 	if (tap_num == 7) {
 		*(filter) = -0.0087;
 		*(filter + 1) = 0.0000;
@@ -244,6 +362,7 @@ int LPF(unsigned char * input_image, int width, int height, int tap_num, int mod
 		*(filter + 5) = 0.0000;
 		*(filter + 6) = -0.0087;
 	}
+	// LPF, sampling frequency 1, cut off frequency 0.25, FIR, 9 tap, Hamming
 	else if (tap_num == 9) {
 		*(filter) = 0.0000;
 		*(filter + 1) = -0.0227;
@@ -254,49 +373,76 @@ int LPF(unsigned char * input_image, int width, int height, int tap_num, int mod
 		*(filter + 6) = 0.0000;
 		*(filter + 7) = -0.0227;
 		*(filter + 8) = 0.0000;
-		return 0;
 	}
-
+	// LPF, sampling frequency 1, cut off frequency 0.4, FIR, 11 tap, Hamming
+	else if (tap_num == 11 && cut_off == 40) {
+		*(filter) = 0.0000;
+		*(filter + 1) = -0.0079;
+		*(filter + 2) = 0.0402;
+		*(filter + 3) = -0.1033;
+		*(filter + 4) = 0.1708;
+		*(filter + 5) = 0.8005;
+		*(filter + 6) = 0.1708;
+		*(filter + 7) = -0.1033;
+		*(filter + 8) = 0.0402;
+		*(filter + 9) = -0.0079;
+		*(filter + 10) = 0.0000;
+	}
+	else if (tap_num == 11 && cut_off == 25) {
+		*(filter) = 0.0051;
+		*(filter + 1) = 0.0000;
+		*(filter + 2) = -0.0419;
+		*(filter + 3) = 0.0000;
+		*(filter + 4) = 0.2885;
+		*(filter + 5) = 0.4968;
+		*(filter + 6) = 0.2885;
+		*(filter + 7) = 0.0000;
+		*(filter + 8) = -0.0419;
+		*(filter + 9) = 0.0000;
+		*(filter + 10) = 0.0051;
+	}
+	
 	// mode 1 : 가로 LPF, mode 2 : 세로 LPF
 	if (mode == 1) {
 		for (int row = 0; row < height; row++) {
 			for (int column = 0; column < width; column++) {
-				unsigned char subResister = 0;
-				for (int tap = 0; tap < tap_num; tap++) {
-					location_doing_convolution = column - (tap_num - 1) / 2 + tap;
+				float subResister = 0.0000;
+				for (int tap = -((tap_num - 1) / 2); tap < (tap_num - 1) / 2 + 1; tap++) {
+					// mid_tap을 사용, LPF 탭의 가운데 부분을 0으로 설정해서 조금 더 직관적으로 계산해 오류를 고쳐보자
+					location_doing_convolution = column + tap;
 					// 미러링
 					if (location_doing_convolution < 0) {
-						subResister += *(input_image + row * width - location_doing_convolution) * *(filter + tap);
+						subResister += *(input_image + row * width + column - tap) * *(mid_tap + tap);
 					}
-					else if (location_doing_convolution >= width) {
-						subResister += *(input_image + row * width + location_doing_convolution - 2 * (location_doing_convolution - (width - 1))) * *(filter + tap);
-					}
+					else if (location_doing_convolution > width - 1) {
+						subResister += *(input_image + row * width + column - tap) * *(mid_tap + tap);
+					} // 미러링 안해도 되는 기본 부분
 					else {
-						subResister += *(input_image + row * width + location_doing_convolution) * *(filter + tap);
+						subResister += *(input_image + row * width + location_doing_convolution) * *(mid_tap + tap);
 					}
 				}
-				*(result_image + row * width + column) = subResister;
+				*(result_image + row * width + column) = (unsigned char) round(subResister);
 			}
 		}
 	}
 	else if (mode == 2) {
 		for (int column = 0; column < width; column++) {
 			for (int row = 0; row < height; row++) {
-				unsigned char subResister = 0;
-				for (int tap = 0; tap < tap_num; tap++) {
-					location_doing_convolution = row - (tap_num - 1) / 2 + tap;
+				float subResister = 0.0000;
+				for (int tap = -((tap_num - 1) / 2); tap < (tap_num - 1) / 2 + 1; tap++) {
+					location_doing_convolution = row + tap;
 					// 미러링
 					if (location_doing_convolution < 0) {
-						subResister += *(input_image - location_doing_convolution * width + column) * *(filter + tap);
+						subResister += *(input_image + (row - tap) * width + column) * *(mid_tap + tap);
 					}
-					else if (location_doing_convolution >= height) {
-						subResister += *(input_image + (location_doing_convolution - 2 * (location_doing_convolution - (height - 1))) * width + column) * *(filter + tap);
-					}
+					else if (location_doing_convolution > height - 1) {
+						subResister += *(input_image + (row - tap) * width + column) * *(mid_tap + tap);
+					} // 미러링 안해도 되는 기본 부분
 					else {
-						subResister += *(input_image + location_doing_convolution * width + column) * *(filter + tap);
+						subResister += *(input_image + location_doing_convolution * width + column) * *(mid_tap + tap);
 					}
 				}
-				*(result_image + row * width + column) = subResister;
+				*(result_image + row * width + column) = (unsigned char) round(subResister);
 			}
 		}
 	}
