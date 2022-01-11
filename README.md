@@ -14,6 +14,20 @@ lena.img의 해상도를 변환해보자. </br>
 LPF 필터와 다양한 알고리즘을 직접 사용해보자. </br>
 (LPF 필터는 make_filter.m 활용해서 생성) </br>
 
+자세한 사항은 보고서에!
+
 ### homework 2-1
 
 S&H 알고리즘
+
+### homework 2-2 
+
+Bilinear 알고리즘
+
+### homework 2-3
+
+Cubic Convolution 알고리즘
+
+### homework 2-4
+
+B-Spline 알고리즘
