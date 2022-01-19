@@ -1,24 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define WIDTH 512
-#define HEIGHT 512
-
-#include <stdio.h>
-#include <malloc.h>
-
-
-int getUserInput(void);
-int rotate90(void);
-int rotate180(void);
-int rotate270(void);
-int mirror(void);
-int flip(void);
-
-//int main(void) {
-//
-//	getUserInput();
-//
-//	return 0;
-//}
+#include "header.h"
 
 int getUserInput(void) {
 

@@ -1,36 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define WIDTH 512
-#define HEIGHT 512
-
-#include <stdio.h>
-#include <malloc.h>
-#include <math.h>
-
-// Scailing 매개변수는 순서대로
-// 입력 파일 경로, 출력 파일 경로, 입력 가로 픽셀 수, 입력 세로 픽셀 수, 출력 가로 픽셀 수, 출력 세로 픽셀 수 
-// LPF 탭 수(0 <= 사용x, 양수 입력은 사용), cut_off frequency(소숫점 아래를 두 자리 정수로), mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
-int Scailing(char*, char*, int, int, int, int, int, int, int);
-
-// LPF 함수: 입력 이미지, 가로 길이, 세로 길이, LPF 탭 수, cut_off frequency(소숫점 아래를 두 자리 정수로) 모드 (1 : 가로 방향, 2 : 세로 방향)
-int LPF(float*, int, int, int, int, int);
-
-// 입력 이미지, 가로 길이, 세로 길이, tap 수, 모드 (1 : 가로 방향, 2 : 세로 방향)
-int pre_emphasis_filter(float*, int, int, int, int);
-
-// 원본 이미지, 예측 이미지, 가로 사이즈 (두 이미지가 정사각형일 때만 사용 가능)
-double MSE(unsigned char*, unsigned char*, int);
-// 이미지 파일 입출력, MSE 결과 프린트까지 한 번에
-int calculate_image_MSE(char *, char *);
-
-// mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
-int lena512to1000to512(int);
-int lena512to400to512NoLPF(int);
-int lena512to945(int);
-int lena512to298NoLPF(int);
-
-// LPF tap 수, cut_off_frequency, mode(1 : S&H, 2 : Bilinear, 3 : Cubic Conv, 4 : cubic b spline)
-int lena512to400to512UsingLPF(int, int, int);
-int lena512to298UsingLPF(int, int, int);
+#include "header.h"
 
 
 int lena512to1000to512(int mode) {
@@ -760,47 +728,6 @@ int pre_emphasis_filter(float* input_image, int width, int height, int tap_num, 
 
 	free(result_image);
 	free(filter);
-
-	return 1;
-}
-
-double MSE(unsigned char * x, unsigned char * y, int size) {
-
-	double error = 0;
-
-	for (int i = 0; i < size * size; i++) {
-		error = error + (*(x + i) - *(y + i)) * (*(x + i) - *(y + i));
-	}
-	return error / (double) (size * size);
-}
-
-int calculate_image_MSE(char* input, char* output) {
-
-	double mse;
-
-	FILE* input_file = NULL;
-	FILE* output_file = NULL;
-
-	unsigned char* input_image = NULL;
-	unsigned char* output_image = NULL;
-
-	input_image = (unsigned char*)malloc(sizeof(unsigned char) * WIDTH * HEIGHT);
-	output_image = (unsigned char*)malloc(sizeof(unsigned char) * WIDTH * HEIGHT);
-
-	input_file = fopen(input, "rb");
-	output_file = fopen(output, "rb");
-
-	fread(input_image, sizeof(unsigned char), WIDTH * HEIGHT, input_file);
-	fclose(input_file);
-	fread(output_image, sizeof(unsigned char), WIDTH * HEIGHT, output_file);
-	fclose(output_file);
-
-	mse = MSE(input_image, output_image, WIDTH);
-
-	free(input_image);
-	free(output_image);
-
-	printf("MSE : %.6f\n", mse);
 
 	return 1;
 }

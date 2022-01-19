@@ -1,98 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define WIDTH 512
-#define HEIGHT 512
-
-#include <stdio.h>
-#include <malloc.h>
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <time.h>
-
-int DCT(int, char*);
-int block_DCT(int, char*, char*);
-int IDCT(int, char*, char*, char*);
-int part_of_IDCT(int, int, char*, char*, char*);
-int vertical_horizontal_DCT(void);
-void quantization_DCT(int, char*, char*);
-double total_error_double(double*, double*);
-double total_error_unsigned_char(unsigned char*, unsigned char*);
-void show_error_between_DCT_blockDCT(void);
-void show_error_between_original_IDCT(void);
-void block_DCT_cpu_time(void);
-double psnr(unsigned char*, unsigned char*);
-
-int main(void) {
-
-	
-	
-	/*
-	
-	// 일부 계수만 사용해 IDCT
-	part_of_IDCT(8, 1, "./lena_DCT.img", "./lena_8block_part_of_1.img", "./lena_8block_part_of_1_view.img");
-	part_of_IDCT(8, 3, "./lena_DCT.img", "./lena_8block_part_of_3.img", "./lena_8block_part_of_3_view.img");
-	part_of_IDCT(8, 10, "./lena_DCT.img", "./lena_8block_part_of_10.img", "./lena_8block_part_of_10_view.img");
-	part_of_IDCT(8, 21, "./lena_DCT.img", "./lena_8block_part_of_21.img", "./lena_8block_part_of_21_view.img");
-	part_of_IDCT(8, 36, "./lena_DCT.img", "./lena_8block_part_of_36.img", "./lena_8block_part_of_36_view.img");
-	*/
-
-	/*
-	
-	part_of_IDCT(2, 1, "./lena_DCT2x2.img", "./lena_2block_part_of_1.img", "./lena_2block_part_of_1_view.img");
-	part_of_IDCT(4, 1, "./lena_DCT4x4.img", "./lena_4block_part_of_1.img", "./lena_4block_part_of_1_view.img");
-	part_of_IDCT(16, 1, "./lena_DCT16x16.img", "./lena_16block_part_of_1.img", "./lena_16block_part_of_1_view.img");
-	part_of_IDCT(32, 1, "./lena_DCT32x32.img", "./lena_32block_part_of_1.img", "./lena_32block_part_of_1_view.img");
-	*/
-	
-
-	quantization_DCT(28, "./lena_db28", "./lena_db28_view.img");
-	quantization_DCT(30, "./lena_db30", "./lena_db30_view.img");
-	quantization_DCT(35, "./lena_db35", "./lena_db35_view.img");
-	quantization_DCT(58, "./lena_db58", "./lena_db58_view.img");
-
-	
-	/*
-	// 가로 세로 DCT와 block DCT
-	printf("가로세로 DCT\n");
-	DCT(8, "lena_DCT.img");
-	printf("Block DCT\n");
-	block_DCT(8, "lena_block_DCT.img", "lena_DCT_view.img");
-	show_error_between_DCT_blockDCT();
-
-	// IDCT
-	IDCT(8, "recon_lena.img", "recon_lena_view.img");
-	show_error_between_original_IDCT();
-	
-	
-	
-	
-	// 블록 사이즈에 따른 실험 결과
-	block_DCT_cpu_time();
-	
-	
-	// 가로무늬 세로무늬 DCT
-	vertical_horizontal_DCT();
-
-
-
-	// 일부 계수만 사용한 IDCT 다양한 블록 크기
-	part_of_IDCT(2, 3, "./lena_2block_part_of_3.img", "./lena_2block_part_of_3_view.img");
-	part_of_IDCT(4, 3, "./lena_4block_part_of_3.img", "./lena_4block_part_of_3_view.img");
-	part_of_IDCT(8, 3, "./lena_8block_part_of_3.img", "./lena_8block_part_of_3_view.img");
-	part_of_IDCT(16, 3, "./lena_16block_part_of_3.img", "./lena_16block_part_of_3_view.img");
-	part_of_IDCT(32, 3, "./lena_32block_part_of_3.img", "./lena_32block_part_of_3_view.img");
-
-
-	part_of_IDCT(16, 10, "./lena_16block_part_of_10.img", "./lena_16block_part_of_10_view.img");
-	part_of_IDCT(32, 10, "./lena_32block_part_of_10.img", "./lena_32block_part_of_10_view.img");
-	
-	part_of_IDCT(4, 10, "./lena_4block_part_of_10.img", "./lena_4block_part_of_10_view.img");
-
-
-
-	*/
-
-	return 0;
-}
+#include "header.h"
 
 void block_DCT_cpu_time(void) {
 	clock_t start1, start2, start3, start4, start5, start6, end1, end2, end3, end4, end5, end6;
@@ -124,10 +30,6 @@ void block_DCT_cpu_time(void) {
 }
 
 int DCT(int dimension, char* output_file_name) {
-
-	FILE* input_file = NULL;
-	FILE* output_file = NULL;
-
 	unsigned char* input_image = NULL;
 	double* mid_image = NULL;
 	double* output_image = NULL;
@@ -142,15 +44,7 @@ int DCT(int dimension, char* output_file_name) {
 	basis_vector = (double*)malloc(sizeof(double) * dimension * dimension);
 	dot_product = (double*)malloc(sizeof(double) * dimension);
 
-	input_file = fopen("./lena.img", "rb");
-
-	if (input_file == NULL) {
-		printf("load img error");
-		return -1;
-	}
-
-	fread(input_image, sizeof(unsigned char), HEIGHT * WIDTH, input_file);
-	fclose(input_file);
+	read_image(input_image, "./lena.img");
 
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int v = 0; v < dimension; v++) {
@@ -220,14 +114,7 @@ int DCT(int dimension, char* output_file_name) {
 
 
 	// 결과 저장
-	output_file = fopen(output_file_name, "wb");
-
-	if (output_file == NULL) {
-		printf("save result error");
-	}
-
-	fwrite(output_image, sizeof(double), WIDTH * HEIGHT, output_file);
-	fclose(output_file);
+	save_double_to_image(output_image, output_file_name);
 
 	free(input_image);
 	free(output_image);
@@ -239,10 +126,6 @@ int DCT(int dimension, char* output_file_name) {
 }
 
 int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
-
-	FILE* input_file = NULL;
-	FILE* output_file = NULL;
-	FILE* output_file_unsigned_char = NULL;
 
 	unsigned char* input_image = NULL;
 	double* output_image = NULL;
@@ -259,16 +142,8 @@ int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
 	basis_vector = (double*)malloc(sizeof(double) * dimension * dimension * dimension * dimension);
 	dot_product = (double*)malloc(sizeof(double) * dimension * dimension);
 
-	input_file = fopen("./lena.img", "rb");
+	read_image(input_image, "./lena.img");
 
-	if (input_file == NULL) {
-		printf("load img error");
-		return -1;
-	}
-
-	fread(input_image, sizeof(unsigned char), HEIGHT * WIDTH, input_file);
-	fclose(input_file);
-	
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int u = 0; u < dimension; u++) {
 		for (int v = 0; v < dimension; v++) {
@@ -324,27 +199,9 @@ int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
 		row = row + dimension;
 	}
 
-	/*
-	// 결과 print 나중에 함수로 만들자
-	for (int row = 0; row < 8; row++) {
-		for (int column = 0; column < 8; column++) {
-
-			printf("output[%d][%d] = %f \n", row, column, *(output_image + row * WIDTH + column));
-		}
-	}
-	*/
-	
-	
 	
 	// 결과 저장
-	output_file = fopen(output_file_name, "wb");
-
-	if (output_file == NULL) {
-		printf("save result error");
-	}
-
-	fwrite(output_image, sizeof(double), WIDTH * HEIGHT, output_file);
-	fclose(output_file);
+	save_double_to_image(output_image, output_file_name);
 
 	// 복사 & clipping
 	double max = *(output_image);
@@ -369,15 +226,7 @@ int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
 		*(output_image_unsigned_char + i) = round(log(*(output_image + i) + 1) * 255.0 / log(max+1));
 	}
 	
-
-	output_file_unsigned_char = fopen(view_file_name, "wb");
-
-	if (output_file_unsigned_char == NULL) {
-		printf("save result error");
-	}
-
-	fwrite(output_image_unsigned_char, sizeof(unsigned char), WIDTH * HEIGHT, output_file_unsigned_char);
-	fclose(output_file_unsigned_char);
+	save_unsigned_char_to_image(output_image_unsigned_char, view_file_name);
 
 	free(input_image);
 	free(output_image);
@@ -388,11 +237,7 @@ int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
 	return 0;
 }
 
-int IDCT(int dimension, char* input_file_name, char* output_file_name, char* view_file_name) {
-	FILE* input_file = NULL;
-	FILE* output_file = NULL;
-	FILE* output_file_unsigned_char = NULL;
-
+int IDCT(int dimension, char* input_file_name, char* view_file_name) {
 	double* input_image = NULL;
 	double* mid_image = NULL;
 	double* output_image = NULL;
@@ -410,15 +255,7 @@ int IDCT(int dimension, char* input_file_name, char* output_file_name, char* vie
 	basis_vector = (double*)malloc(sizeof(double) * dimension * dimension * dimension * dimension);
 	dot_product = (double*)malloc(sizeof(double) * dimension * dimension);
 
-	input_file = fopen(input_file_name, "rb");
-
-	if (input_file == NULL) {
-		printf("load img error");
-		return -1;
-	}
-
-	fread(input_image, sizeof(double), HEIGHT * WIDTH, input_file);
-	fclose(input_file);
+	read_image(input_image, input_file_name);
 
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int i = 0; i < dimension; i++) {
@@ -474,28 +311,14 @@ int IDCT(int dimension, char* input_file_name, char* output_file_name, char* vie
 		row = row + dimension;
 	}
 
-	// 결과 저장
-	output_file = fopen(output_file_name, "wb");
-
-	if (output_file == NULL) {
-		printf("save result error");
-	}
-	fwrite(output_image, sizeof(double), WIDTH * HEIGHT, output_file);
-	fclose(output_file);
-
 	// view 파일 저장
-	output_file_unsigned_char = fopen(view_file_name, "wb");
-
 	for (int i = 0; i < WIDTH * HEIGHT; i++) {
 		*(output_image_unsigned_char + i) = round(*(output_image + i));
 	}
 
-	if (output_file_unsigned_char == NULL) {
-		printf("save result error");
-	}
-	fwrite(output_image_unsigned_char, sizeof(unsigned char), WIDTH * HEIGHT, output_file_unsigned_char);
-	fclose(output_file_unsigned_char);
-	
+	save_unsigned_char_to_image(output_image_unsigned_char, view_file_name);
+
+
 	free(input_image);
 	free(mid_image);
 	free(output_image);
@@ -937,12 +760,7 @@ int part_of_IDCT(int dimension, int part, char* input_file_name, char* output_fi
 	return 0;
 }
 
-void quantization_DCT(int db, char* output_file_name, char* view_file_name) {
-
-	FILE* dct_file = NULL;
-	FILE* output_file = NULL;
-	FILE* output_file_unsigned_char = NULL;
-
+void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
 	double* dct_image = NULL;
 	double* input_image = NULL;
 	double* mid_image = NULL;
@@ -1057,15 +875,8 @@ void quantization_DCT(int db, char* output_file_name, char* view_file_name) {
 		}
 	}
 
-	dct_file = fopen("./lena_DCT.img", "rb");
+	read_image(dct_image, input_file_name);
 
-	if (dct_file == NULL) {
-		printf("load img error");
-		return -1;
-	}
-
-	fread(dct_image, sizeof(double), HEIGHT * WIDTH, dct_file);
-	fclose(dct_file);
 	int dimension = 8;
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int i = 0; i < dimension; i++) {
@@ -1201,23 +1012,8 @@ void quantization_DCT(int db, char* output_file_name, char* view_file_name) {
 
 	printf("%d db 양자화 복원 PSNR : %f\n", db, PSNR);
 
-	// 결과 저장
-	output_file = fopen(output_file_name, "wb");
-
-	if (output_file == NULL) {
-		printf("save result error");
-	}
-	fwrite(output_image, sizeof(double), WIDTH * HEIGHT, output_file);
-	fclose(output_file);
-
 	// view 파일 저장
-	output_file_unsigned_char = fopen(view_file_name, "wb");
-
-	if (output_file_unsigned_char == NULL) {
-		printf("save result error");
-	}
-	fwrite(output_image_unsigned_char, sizeof(unsigned char), WIDTH * HEIGHT, output_file_unsigned_char);
-	fclose(output_file_unsigned_char);
+	save_unsigned_char_to_image(output_image_unsigned_char, view_file_name);
 
 	free(dct_image);
 	free(input_image);
@@ -1231,28 +1027,6 @@ void quantization_DCT(int db, char* output_file_name, char* view_file_name) {
 	free(coef28);
 	free(coef30);
 	return 0;
-}
-
-double total_error_double(double* input, double* output) {
-	double result = 0;
-	for (int i = 0; i < WIDTH * HEIGHT; i++) {
-		result += (*(input + i) - *(output + i)) * (*(input + i) - *(output + i));
-	}
-	return result;
-}
-
-double total_error_unsigned_char(unsigned char* input, unsigned char* output) {
-	double result = 0;
-	for (int i = 0; i < WIDTH * HEIGHT; i++) {
-		result += (*(input + i) - *(output + i)) * (*(input + i) - *(output + i));
-	}
-	return result;
-}
-
-double psnr(unsigned char* input, unsigned char* output) {
-	double te = total_error_unsigned_char(input, output);
-	double mse = te / (WIDTH * HEIGHT);
-	return 20 * log10(255) - 10 * log10(mse);
 }
 
 void show_error_between_DCT_blockDCT(void) {
