@@ -18,7 +18,10 @@
     <ClCompile Include="homework1.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="homewokr2.c">
+    <ClCompile Include="homework2.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="homework3.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
