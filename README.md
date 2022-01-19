@@ -31,3 +31,12 @@ Cubic Convolution 알고리즘
 ### homework 2-4
 
 B-Spline 알고리즘
+
+## homework 3
+
+DCT와 IDCT를 배우고 적용해보자. </br>
+더 나아가 일부 계수만 이용한 IDCT, 양자화 적용까지! </br>
+
+## homework 4
+
+정보이론을 배우고, 연습 문제를 풀어보자. (코딩x, 보고서 o) </
