@@ -29,22 +29,17 @@ void block_DCT_cpu_time(void) {
 	printf("64x64 블록 실행 시간 : %.3f\n", (float)(end6 - start6) / CLOCKS_PER_SEC);
 }
 
-int DCT(int dimension, char* output_file_name) {
-	unsigned char* input_image = NULL;
+int DCT(int dimension, unsigned char* input_image, double* output_image) {
 	double* mid_image = NULL;
-	double* output_image = NULL;
 	double* basis_vector = NULL;
 	// 내적 계산 결과를 임시 저장할 포인터
 	double* dot_product = NULL;
 
-	input_image = (unsigned char*)malloc(sizeof(unsigned char) * WIDTH * HEIGHT);
 	mid_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
-	output_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
 
 	basis_vector = (double*)malloc(sizeof(double) * dimension * dimension);
 	dot_product = (double*)malloc(sizeof(double) * dimension);
 
-	read_image(input_image, "./lena.img");
 
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int v = 0; v < dimension; v++) {
@@ -103,7 +98,6 @@ int DCT(int dimension, char* output_file_name) {
 		}
 	}
 	
-
 	// 결과 print 나중에 함수로 만들자
 	for (int row = 0; row < 8; row++) {
 		for (int column = 0; column < 8; column++) {
@@ -112,12 +106,6 @@ int DCT(int dimension, char* output_file_name) {
 		}
 	}
 
-
-	// 결과 저장
-	save_double_to_image(output_image, output_file_name);
-
-	free(input_image);
-	free(output_image);
 	free(mid_image);
 	free(basis_vector);
 	free(dot_product);
@@ -237,25 +225,20 @@ int block_DCT(int dimension, char* output_file_name, char* view_file_name) {
 	return 0;
 }
 
-int IDCT(int dimension, char* input_file_name, char* view_file_name) {
-	double* input_image = NULL;
+int IDCT(int dimension, double* input_image, unsigned char* output_image_unsigned_char) {
 	double* mid_image = NULL;
 	double* output_image = NULL;
-	unsigned char* output_image_unsigned_char = NULL;
 
 	double* basis_vector = NULL;
 	// 내적 계산 결과를 임시 저장할 포인터
 	double* dot_product = NULL;
 
-	input_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
 	mid_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
 	output_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
-	output_image_unsigned_char = (unsigned char*)malloc(sizeof(unsigned char) * WIDTH * HEIGHT);
 
 	basis_vector = (double*)malloc(sizeof(double) * dimension * dimension * dimension * dimension);
 	dot_product = (double*)malloc(sizeof(double) * dimension * dimension);
 
-	read_image(input_image, input_file_name);
 
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
 	for (int i = 0; i < dimension; i++) {
@@ -316,13 +299,8 @@ int IDCT(int dimension, char* input_file_name, char* view_file_name) {
 		*(output_image_unsigned_char + i) = round(*(output_image + i));
 	}
 
-	save_unsigned_char_to_image(output_image_unsigned_char, view_file_name);
-
-
-	free(input_image);
 	free(mid_image);
 	free(output_image);
-	free(output_image_unsigned_char);
 	free(basis_vector);
 	free(dot_product);
 
@@ -760,12 +738,142 @@ int part_of_IDCT(int dimension, int part, char* input_file_name, char* output_fi
 	return 0;
 }
 
-void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
-	double* dct_image = NULL;
+void quantization(int db, double* dct_image, double* output_image) {
+
+	int* coef35 = NULL;
+	int* coef58 = NULL;
+	int* coef28 = NULL;
+	int* coef30 = NULL;
+
+	coef35 = (int*)malloc(sizeof(int) * 8 * 8);
+	coef58 = (int*)malloc(sizeof(int) * 8 * 8);
+	coef28 = (int*)malloc(sizeof(int) * 8 * 8);
+	coef30 = (int*)malloc(sizeof(int) * 8 * 8);
+
+	// 어떻게 넣을지 몰라 일단 일일이... 넣었습니다.
+	*(coef35) = 16;
+	*(coef35 + 1) = 11;
+	*(coef35 + 2) = 10;
+	*(coef35 + 3) = 16;
+	*(coef35 + 4) = 24;
+	*(coef35 + 5) = 40;
+	*(coef35 + 6) = 51;
+	*(coef35 + 7) = 61;
+
+	*(coef35 + 8) = 12;
+	*(coef35 + 9) = 12;
+	*(coef35 + 10) = 14;
+	*(coef35 + 11) = 19;
+	*(coef35 + 12) = 26;
+	*(coef35 + 13) = 58;
+	*(coef35 + 14) = 60;
+	*(coef35 + 15) = 55;
+
+	*(coef35 + 16) = 14;
+	*(coef35 + 17) = 13;
+	*(coef35 + 18) = 16;
+	*(coef35 + 19) = 19;
+	*(coef35 + 20) = 26;
+	*(coef35 + 21) = 58;
+	*(coef35 + 22) = 60;
+	*(coef35 + 23) = 55;
+
+	*(coef35 + 24) = 18;
+	*(coef35 + 25) = 22;
+	*(coef35 + 26) = 37;
+	*(coef35 + 27) = 56;
+	*(coef35 + 28) = 68;
+	*(coef35 + 29) = 109;
+	*(coef35 + 30) = 103;
+	*(coef35 + 31) = 77;
+
+	*(coef35 + 32) = 24;
+	*(coef35 + 33) = 35;
+	*(coef35 + 34) = 55;
+	*(coef35 + 35) = 64;
+	*(coef35 + 36) = 81;
+	*(coef35 + 37) = 104;
+	*(coef35 + 38) = 113;
+	*(coef35 + 39) = 92;
+
+	*(coef35 + 40) = 49;
+	*(coef35 + 41) = 64;
+	*(coef35 + 42) = 78;
+	*(coef35 + 43) = 87;
+	*(coef35 + 44) = 103;
+	*(coef35 + 45) = 121;
+	*(coef35 + 46) = 120;
+	*(coef35 + 47) = 101;
+
+	*(coef35 + 48) = 49;
+	*(coef35 + 49) = 64;
+	*(coef35 + 50) = 78;
+	*(coef35 + 51) = 87;
+	*(coef35 + 52) = 103;
+	*(coef35 + 53) = 121;
+	*(coef35 + 54) = 120;
+	*(coef35 + 55) = 101;
+
+	*(coef35 + 56) = 72;
+	*(coef35 + 57) = 92;
+	*(coef35 + 58) = 95;
+	*(coef35 + 59) = 98;
+	*(coef35 + 60) = 112;
+	*(coef35 + 61) = 100;
+	*(coef35 + 62) = 130;
+	*(coef35 + 63) = 99;
+
+	for (int i = 0; i < 64; i++) {
+		*(coef58 + i) = 1;
+		*(coef28 + i) = 100;
+	}
+	// 35db와 30db는 상하반전이므로 이를 이용해보자
+	for (int row = 0; row < 8; row++) {
+		for (int column = 0; column < 8; column++) {
+			*(coef30 + row * 8 + column) = *(coef35 + (7 - row) * 8 + column);
+		}
+	}
+
+	// 양자화
+	// row column은 dct 이미지의 행과 열, i, j는 블록 내의 행과 열
+	for (int row = 0; row < HEIGHT; row) {
+		for (int column = 0; column < WIDTH; column) {
+			// 나누기
+			for (int i = 0; i < 8; i++) {
+				for (int j = 0; j < 8; j++) {
+					if (db == 35) {
+						*(output_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef35 + i * 8 + j));
+					}
+					else if (db == 30) {
+						*(output_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef30 + i * 8 + j));
+					}
+					else if (db == 28) {
+						*(output_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef28 + i * 8 + j));
+					}
+					else if (db == 58) {
+						*(output_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef58 + i * 8 + j));
+					}
+					if (row < 16 && column < 16) {
+						printf("%.1f ", *(output_image + (row + i) * WIDTH + column + j));
+					}
+				}
+				if (row < 16 && column < 16) {
+					printf("\n");
+				}
+			}
+			if (row < 16 && column < 16) {
+				printf("블록 이동 \n");
+			}
+			column = column + 8;
+		}
+		row = row + 8;
+	}
+}
+void quantization_IDCT(int db, double* input_image, unsigned char* output_image_unsigned_char) {
+
 	double* input_image = NULL;
 	double* mid_image = NULL;
 	double* output_image = NULL;
-	unsigned char* output_image_unsigned_char = NULL;
 
 	double* basis_vector = NULL;
 	// 내적 계산 결과를 임시 저장할 포인터
@@ -781,11 +889,8 @@ void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
 	coef28 = (int*)malloc(sizeof(int) * 8 * 8);
 	coef30 = (int*)malloc(sizeof(int) * 8 * 8);
 
-	dct_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
-	input_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
 	mid_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
 	output_image = (double*)malloc(sizeof(double) * WIDTH * HEIGHT);
-	output_image_unsigned_char = (unsigned char*)malloc(sizeof(unsigned char) * WIDTH * HEIGHT);
 
 
 	basis_vector = (double*)malloc(sizeof(double) * 8 * 8 * 8 * 8);
@@ -875,7 +980,6 @@ void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
 		}
 	}
 
-	read_image(dct_image, input_file_name);
 
 	int dimension = 8;
 	// basis vector 계산, 벡터가 v개, 각 벡터는 v개 원소 (v는 DIMENTION 상수)
@@ -903,42 +1007,6 @@ void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
 				}
 			}
 		}
-	}
-	
-
-	// 양자화
-	// row column은 dct 이미지의 행과 열, i, j는 블록 내의 행과 열
-	for (int row = 0; row < HEIGHT; row) {
-		for (int column = 0; column < WIDTH; column) {
-			// 나누기
-			for (int i = 0; i < 8; i++) {
-				for (int j = 0; j < 8; j++) {
-					if (db == 35) {
-						*(input_image + (row + i) * WIDTH + column + j) = (int) (*(dct_image + (row + i) * WIDTH + column + j) / *(coef35 + i * 8 + j));
-					}
-					else if (db == 30) {
-						*(input_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef30 + i * 8 + j));
-					}
-					else if (db == 28) {
-						*(input_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef28 + i * 8 + j));
-					}
-					else if (db == 58) {
-						*(input_image + (row + i) * WIDTH + column + j) = (int)(*(dct_image + (row + i) * WIDTH + column + j) / *(coef58 + i * 8 + j));
-					}
-					if (row < 16 && column < 16) {
-						printf("%.1f ", *(input_image + (row + i) * WIDTH + column + j));
-					}
-				}
-				if (row < 16 && column < 16) {
-					printf("\n");
-				}
-			}
-			if (row < 16 && column < 16) {
-				printf("블록 이동 \n");
-			}
-			column = column + 8;
-		}
-		row = row + 8;
 	}
 	
 	// block IDCT
@@ -1012,14 +1080,8 @@ void quantization_IDCT(int db, char* input_file_name, char* view_file_name) {
 
 	printf("%d db 양자화 복원 PSNR : %f\n", db, PSNR);
 
-	// view 파일 저장
-	save_unsigned_char_to_image(output_image_unsigned_char, view_file_name);
-
-	free(dct_image);
-	free(input_image);
 	free(mid_image);
 	free(output_image);
-	free(output_image_unsigned_char);
 	free(basis_vector);
 	free(dot_product);
 	free(coef35);

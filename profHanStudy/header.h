@@ -66,18 +66,20 @@ int lena512to298UsingLPF(int, int, int);
 
 // homework 3 DCT
 
-// 차원, 저장할 파일 이름
-int DCT(int, char*);
+// 차원, 입력 이미지 포인터, 결과 이미지 포인터
+int DCT(int, unsigned char*, double*);
 // 차원, DCT 결과 저장할 파일 이름, DCT결과를 보기 위한 파일 이름
 int block_DCT(int, char*, char*);
-// 차원, IDCT할 DCT 파일 이름, 결과 이미지 이름
-int IDCT(int, char*, char*);
+// 차원, IDCT할 DCT가 담긴 포인터, 결과 이미지 포인터
+int IDCT(int, double*, unsigned char*);
 // 일부 계수만 사용한 DCT, 입력값 : 차원, 사용할 계수의 수, IDCT할 파일 이름, 결과 저장 파일 이름, 결과를 보기 위한 파일 이름
 int part_of_IDCT(int, int, char*, char*, char*);
 // 가로세로 DCT
 int vertical_horizontal_DCT(void);
-// 양자화 DCT, 입력값 : db, 저장 파일 이름
-void quantization_IDCT(int, char*, char*);
+// 양자화, 입력값 : db, 양자화할 DCT 포인터, 결과 포인터
+void quantization(int, double*, double*);
+// 양자화 DCT, 입력값 : db, IDCT할 포인터, 결과 포인터
+void quantization_IDCT(int, double*, unsigned char*);
 // DCT 방법 간에 차이가 있는지 확인 & 원본과 IDCT 결과물에 차이가 있는지 확인
 void show_error_between_DCT_blockDCT(void);
 void show_error_between_original_IDCT(void);
