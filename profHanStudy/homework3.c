@@ -97,14 +97,6 @@ int DCT(int dimension, unsigned char* input_image, double* output_image) {
 			row = row + dimension;
 		}
 	}
-	
-	// 결과 print 나중에 함수로 만들자
-	for (int row = 0; row < 8; row++) {
-		for (int column = 0; column < 8; column++) {
-
-			printf("output[%d][%d] = %f \n", row, column, *(output_image + row * WIDTH + column));
-		}
-	}
 
 	free(mid_image);
 	free(basis_vector);
@@ -869,9 +861,9 @@ void quantization(int db, double* dct_image, double* output_image) {
 		row = row + 8;
 	}
 }
+
 void quantization_IDCT(int db, double* input_image, unsigned char* output_image_unsigned_char) {
 
-	double* input_image = NULL;
 	double* mid_image = NULL;
 	double* output_image = NULL;
 

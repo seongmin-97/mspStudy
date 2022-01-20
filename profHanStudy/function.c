@@ -104,3 +104,43 @@ double psnr(unsigned char* input, unsigned char* output) {
 	double mse = te / (WIDTH * HEIGHT);
 	return 20 * log10(255) - 10 * log10(mse);
 }
+
+void print_block_char(char* input, int row, int column) {
+	printf("block[%d][%d]\n", row, column);
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%d ", *(input + (8 * row + i) * WIDTH + 8 * column + j));
+		}
+		printf("\n");
+	}
+}
+
+void print_block_unsigned_char(unsigned char* input, int row, int column) {
+	printf("block[%d][%d]\n", row, column);
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%d ", *(input + (8 * row + i) * WIDTH + 8 * column + j));
+		}
+		printf("\n");
+	}
+}
+
+void print_block_double(double* input, int row, int column) {
+	printf("block[%d][%d]\n", row, column);
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%.3f ", *(input + (8 * row + i) * WIDTH + 8 *column + j));
+		}
+		printf("\n");
+	}
+}
+
+void print_block_int(int* input, int row, int column) {
+	printf("block[%d][%d]\n", row, column);
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%d ", *(input + (8 * row + i) * WIDTH + 8 * column + j));
+		}
+		printf("\n");
+	}
+}

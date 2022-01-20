@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <stdlib.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <time.h>
@@ -13,10 +14,10 @@
 // function.c 자주 쓰일 것으로 예상되는 함수들
 
 // 입력값 : 값을 읽어올 포인터, 읽어올 파일
-void read_image(unsigned char* input, char* file_name);
+void read_image(unsigned char*, char*);
 // lena 이미지 저장, 입력값 : 저장하고 싶은 정보가 있는 포인터, 파일 이름
-void save_unsigned_char_to_image(unsigned char* input, char* file_name);
-void save_double_to_image(double* input, char* file_name);
+void save_unsigned_char_to_image(unsigned char*, char*);
+void save_double_to_image(double*, char*);
 
 // 원본 이미지, 예측 이미지, 가로 사이즈 (두 이미지가 정사각형일 때만 사용 가능)
 double MSE(unsigned char*, unsigned char*, int);
@@ -28,6 +29,12 @@ double total_error_double(double*, double*);
 double total_error_unsigned_char(unsigned char*, unsigned char*);
 double psnr(unsigned char*, unsigned char*);
 
+// 블록 프린트
+// 입력 이미지, row, column (단, block을 하나의 데이터라 생각하고 위치 입력)
+void print_block_unsigned_char(unsigned char*, int, int);
+void print_block_char(char*, int, int);
+void print_block_double(double*, int, int);
+void print_block_int(int*, int, int);
 
 // homework 1 이미지 회전/ 좌우반전/ 상하반전
 
@@ -85,3 +92,33 @@ void show_error_between_DCT_blockDCT(void);
 void show_error_between_original_IDCT(void);
 // block size별 cpu 시간 확인
 void block_DCT_cpu_time(void);
+
+// homework 5 JPEG
+
+// jpeg 언코더 함수, 입력값 : 읽어올 파일 이름, dpcm, zigzag scan 받을 포인터들
+void jpeg_encoder(char*, char*, int*);
+// 차원, 입력 이미지 포인터, 결과 이미지 포인터
+void DCT_char(int, char*, double*);
+// 양자화, 입력값 : 양자화할 DCT 포인터, 결과 포인터
+void quantization_jpeg(double*, int*);
+// 레벨 쉬프트, 입력 이미지, 결과 이미지
+void level_shifting_128_encoder(unsigned char*, char*);
+// dpcm, 양자화된 이미지 포인터, dc계수를 저장할 포인터
+void DPCM(int*, char*);
+// zigzag scan, 스캔할 이미지, 스캔 결과
+void zigzag_scan(int*, int*);
+// RLC, 부호화할 포인터, 결과, 반환값은 사용한 튜플 수
+int run_length_code(int*, char*);
+
+
+
+// jpeg 디코더 함수, 결과를 저장할 파일 이름, dpcm포인터, zigzag scan 포인터
+void jpeg_decoder(char*, char*, int*);
+// dc값을 원상복귀, dpcm 포인터, 결과를 담을 포인터
+void decode_DPCM(char*, int*);
+// zigzag scan과 dc 계수를 이용해 양자화 행렬 복원, 입력값 : dc계수를 담은 포인터, zigzag_scan 포인터, 결과 담을 포인터
+void decode_zigzag_scan(int*, int*, int*);
+// 양자화 IDCT, 입력값 : IDCT할 포인터, 결과 포인터
+void quantization_IDCT_jpeg(int*, char*);
+// 레벨 쉬프트, 입력 이미지, 결과 이미지
+void level_shifting_128_decoder(char*, unsigned char*);
