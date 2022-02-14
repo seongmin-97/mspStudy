@@ -1,12 +1,12 @@
 # profHanStudy
 
+## 자세한 사항은 보고서에!
+
 ## homework 1
 
 jpeg, png, bmp, gif, raw 이미지 특징 알아보기 </br>
 lena.img (raw, 512x512) 이미지를 90도, 180도, 270도, 좌우반전, 상하반전 하기 <br/>
 (단, 인덱스 표기법 사용하지 않고 포인터만 사용) <br/>
-
-자세한 사항은 보고서에!
 
 ## homework 2
 
@@ -48,3 +48,7 @@ JPEG 인코더와 디코더 구현하기 (엔트로피 코딩 제외) </br>
 ## homework 6
 
 Image Stitching의 개요 정리하기 </br>
+
+## homework 7
+
+Image Feature Extraction에 대해 공부하기 </br>
