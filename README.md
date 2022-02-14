@@ -45,3 +45,6 @@ DCT와 IDCT를 배우고 적용해보자. </br>
 
 JPEG 인코더와 디코더 구현하기 (엔트로피 코딩 제외) </br>
 
+## homework 6
+
+Image Stitching의 개요 정리하기 </br>
