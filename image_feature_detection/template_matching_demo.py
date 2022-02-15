@@ -14,6 +14,20 @@ img2 = cv2.imread('./data/sample1.jpg', 0)  # trainImage
 kp1, des1 = pysift.computeKeypointsAndDescriptors(img1)
 kp2, des2 = pysift.computeKeypointsAndDescriptors(img2)
 
+plt.subplot(121)
+plt.imshow(img1)
+for i in range(len(kp1)) :
+    plt.scatter(kp1[i].pt[0], kp1[i].pt[1], c='red', s=10)
+
+    
+plt.subplot(122)
+plt.imshow(img2)
+for i in range(len(kp2)) :
+    plt.scatter(kp2[i].pt[0], kp2[i].pt[1], c='red', s=10)
+
+
+plt.show()
+
 # Initialize and use FLANN
 FLANN_INDEX_KDTREE = 0
 index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)

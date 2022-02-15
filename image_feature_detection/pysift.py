@@ -21,8 +21,6 @@ def computeKeypointsAndDescriptors(image, sigma=1.6, num_intervals=3, assumed_bl
     """
     image = image.astype('float32')
     base_image = generateBaseImage(image, sigma, assumed_blur)
-    plt.imshow(base_image)
-    plt.show()
     num_octaves = computeNumberOfOctaves(base_image.shape)
     gaussian_kernels = generateGaussianKernels(sigma, num_intervals)
     print("gaussian_kernels : ", gaussian_kernels)
@@ -33,8 +31,7 @@ def computeKeypointsAndDescriptors(image, sigma=1.6, num_intervals=3, assumed_bl
     keypoints = removeDuplicateKeypoints(keypoints)
     keypoints = convertKeypointsToInputImageSize(keypoints)
     descriptors = generateDescriptors(keypoints, gaussian_images)
-    print(descriptors[0])
-    print(descriptors[1])
+
     return keypoints, descriptors
 
 #########################
