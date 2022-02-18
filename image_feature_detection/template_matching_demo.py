@@ -8,22 +8,25 @@ logger = logging.getLogger(__name__)
 MIN_MATCH_COUNT = 10
 
 img1 = cv2.imread('./data/sample.jpg', 0)           # queryImage
-img2 = cv2.imread('./data/sample1.jpg', 0)  # trainImage
+img2 = cv2.imread('./data/sample1.jpg', 0)          # trainImage
+
+color_img1 = cv2.imread('./data/sample.jpg')
+color_img2 = cv2.imread('./data/sample1.jpg')
 
 # Compute SIFT keypoints and descriptors
 kp1, des1 = pysift.computeKeypointsAndDescriptors(img1)
 kp2, des2 = pysift.computeKeypointsAndDescriptors(img2)
 
 plt.subplot(121)
-plt.imshow(img1)
+plt.imshow(color_img1)
 for i in range(len(kp1)) :
-    plt.scatter(kp1[i].pt[0], kp1[i].pt[1], c='red', s=10)
+    plt.scatter(kp1[i].pt[0], kp1[i].pt[1], c='red', s=1)
 
     
 plt.subplot(122)
-plt.imshow(img2)
+plt.imshow(color_img2)
 for i in range(len(kp2)) :
-    plt.scatter(kp2[i].pt[0], kp2[i].pt[1], c='red', s=10)
+    plt.scatter(kp2[i].pt[0], kp2[i].pt[1], c='red', s=1)
 
 
 plt.show()
