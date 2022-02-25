@@ -1,37 +1,29 @@
+from turtle import distance
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_feature_SIFT(fname1, fname2, showImg) :
+def get_feature_SIFT(fname1, showImg) :
     # 이미지 불러오기
     img1 = cv2.imread(fname1)
-    img2 = cv2.imread(fname2)
     
     # 색상변환
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
     # SIFT
     sift = cv2.xfeatures2d.SIFT_create()
 
     kp1, des1 = sift.detectAndCompute(img1_gray, None)
-    kp2, des2 = sift.detectAndCompute(img2_gray, None)
 
     # 출력
     if showImg :
-        plt.subplot(121)
         plt.imshow(img1)
         for i in range(len(kp1)) :
             plt.scatter(kp1[i].pt[0], kp1[i].pt[1], c='red', s=0.5)
-        
-        plt.subplot(122)
-        plt.imshow(img2)
-        for i in range(len(kp2)) :
-            plt.scatter(kp2[i].pt[0], kp2[i].pt[1], c='red', s=0.5)
-        
         plt.show()
-    return kp1, kp2, des1, des2
+
+    return kp1, des1
 
 # fnames : 영상 파이 ㄹ이름 목록
 def get_matches(des1, des2, ratio=0.7) :
@@ -88,20 +80,26 @@ def image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2) :
     plt.imshow(newImg)
     plt.show()
     
+def get_matching_feature(fname1, fname2, NNDR) :
+    
+    kp1, kp2, _, _, idx1, idx2 = SIFT_feature_matching(fname1, fname2, NNDR, False)
+    number_of_matching = len(idx1)
+
+    matching_keypoint1 = []
+    matching_keypoint2 = []
+
+    for index in range(number_of_matching) :                                                    # matching_keypoint1, matching_keypoint2 : 매칭 feature 개수 x 3
+        matching_keypoint1.append([kp1[idx1[index]].pt[0], kp1[idx1[index]].pt[1], 1])          # [[x, y, 1],
+        matching_keypoint2.append([kp2[idx2[index]].pt[0], kp2[idx2[index]].pt[1], 1])          #  [x, y, 1],
+                                                                                                #  [x, y, 1]]
+    return matching_keypoint1, matching_keypoint2, number_of_matching
+
+
 def SIFT_feature_matching(fname1, fname2, ratio, showImg) :
-    kp1, kp2, des1, des2 = get_feature_SIFT(fname1, fname2, showImg)
+    kp1, des1 = get_feature_SIFT(fname1, showImg)
+    kp2, des2 = get_feature_SIFT(fname2, showImg)
     idx1, idx2 = get_matches(des1, des2, ratio)
-    image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2)
-
-
-
-
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.9, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.8, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.7, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.6, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.5, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.4, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.3, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.2, False)
-SIFT_feature_matching('./data/sample.jpg', './data/sample1.jpg', 0.1, False)
+    if showImg :
+        image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2)
+    else :
+        return kp1, kp2, des1, des2, idx1, idx2
