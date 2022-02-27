@@ -1,3 +1,4 @@
+
 import cv2
 import random
 import numpy as np
@@ -33,15 +34,45 @@ def temporary_image_warping(fname1, fname2, NNDR=0.8, ransac_trial=1000) :
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(fname1, fname2, NNDR)
     best_H, best_inlier_num = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, ransac_trial)
-    best_H, x_offset, y_offset = translate_homography(best_H, img1)
-    img1_homography_transformation_to_img2 = homography_transformation(best_H, img1)
-    bounding_box = calculate_bounding_box(img1_homography_transformation_to_img2, img2, x_offset, y_offset, best_H)
-    print("결과" ,bounding_box)
+
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+
+    pts1 = np.array([[0, 0] ,[0, h1], [w1, h1], [w1, 0]], dtype='float32').reshape(-1, 1, 2)
+    pts2 = np.array([[0, 0] ,[0, h2], [w2, h2], [w2, 0]], dtype='float32').reshape(-1, 1, 2)
+
+    pts1_ = cv2.perspectiveTransform(pts1, best_H)
+    pts = np.concatenate((pts1_, pts2), axis=0)
+
+    print('------------------------')
+    print(pts.min(axis=0))
+    print(pts.min(axis=0).ravel())
+
+    [xmin, ymin] = pts.min(axis=0).ravel()
+    [xmax, ymax] = pts.max(axis=0).ravel()
+
+    xmin = int(xmin - 0.5)
+    ymin = int(ymin - 0.5)
+    xmax = int(xmax + 0.5)
+    ymax = int(ymax + 0.5)
+
+    t = [-xmin, -ymin]
+
+    Ht = np.array([[1, 0, t[0]],
+                    [0, 1, t[1]],
+                    [0, 0, 1]])
+
+    result = cv2.warpPerspective(img1, Ht.dot(best_H), (xmax-xmin, ymax-ymin))
+    result[t[1]:h2+t[1], t[0]:w2+t[0], :] = img2[:, :, :]
+
+    cv2.imwrite('./temporary_result.jpg', result)
+
+    # print("결과" ,bounding_box)
 
 
-    canvas1 = cv2.warpPerspective(img1, best_H, (3000, 3000), flags=cv2.INTER_LINEAR)
-    result = image_mosaicing(canvas1, img2, x_offset, y_offset)
-    print("결과 그리기 시작")
+    # canvas1 = cv2.warpPerspective(img1, best_H, (1000, 1000), flags=cv2.INTER_LINEAR)
+    # result = image_mosaicing(canvas1, img2, x_offset, y_offset)
+    # print("결과 그리기 시작")
 
     cv2.imwrite('./temporary_result.jpg', result)
 
@@ -179,17 +210,13 @@ def translate_homography(best_H, img1) :
     x_offset = 0
     y_offset = 0
 
-    for y in range(len(img1_homography_transformation_to_img2)) :
-        for x in range(len(img1_homography_transformation_to_img2[0])) :
-            if x_offset > img1_homography_transformation_to_img2[y][x][0] :
-                x_offset = img1_homography_transformation_to_img2[y][x][0]
-            if y_offset > img1_homography_transformation_to_img2[y][x][1] :
-                y_offset = img1_homography_transformation_to_img2[y][x][1]
+    inverse = np.linalg.inv(best_H)
 
-    translate_trnasformation = np.array([[1, 0, abs(x_offset)],
-                                         [0, 1, abs(y_offset)],
+    translate = np.matmul(inverse, np.array([0, 0, 1]))
+
+    translate_trnasformation = np.array([[1, 0, translate[0]/translate[2]],
+                                         [0, 1, translate[1]/translate[2]],
                                          [0, 0, 1]])
-
     best_H = np.matmul(translate_trnasformation, best_H)
     best_H = best_H / best_H[2][2]
 
@@ -197,7 +224,8 @@ def translate_homography(best_H, img1) :
 
 def image_mosaicing(canvas1, img2, x_offset, y_offset) :
     
-    #canvas[int(abs(y_offset)):img2.shape[0]+int(abs(y_offset)), int(abs(x_offset)):img2.shape[1]+int(abs(x_offset)), :] = img2[:, :, :]
+    # canvas1[int(abs(y_offset)):img2.shape[0]+int(abs(y_offset)), int(abs(x_offset)):img2.shape[1]+int(abs(x_offset)), :] = img2[:, :, :]
+
     for i in range(len(img2)) :
         for j in range(len(img2[0])) :
             for k in range(len(img2[0][0])) :
@@ -208,4 +236,4 @@ def image_mosaicing(canvas1, img2, x_offset, y_offset) :
 
     return canvas1
 
-temporary_image_warping('./data/school2.jpg', './data/school1.jpg')
+temporary_image_warping('./data/school3.jpg', './temporary_result.jpg')
