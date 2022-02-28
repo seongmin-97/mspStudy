@@ -4,9 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_feature_SIFT(fname1, showImg) :
+def get_feature_SIFT(img1, showImg) :
     # 이미지 불러오기
-    img1 = cv2.imread(fname1)
     
     # 색상변환
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
@@ -43,11 +42,8 @@ def get_matches(des1, des2, ratio=0.7) :
             
     return idx1, idx2
 
-def image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2) :
-    # 이미지 불러오기
-    img1 = cv2.imread(fname1, 0)
-    img2 = cv2.imread(fname2, 0)    
-    
+def image_feature_match_draw(img1, img2, kp1, kp2, idx1, idx2) :
+
     # 이미지 붙이기 (이미지 결과 보여주기 준비)
     h1, w1 = img1.shape
     h2, w2 = img2.shape
@@ -80,9 +76,9 @@ def image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2) :
     plt.imshow(newImg)
     plt.show()
     
-def get_matching_feature(fname1, fname2, NNDR) :
+def get_matching_feature(img1, img2, NNDR) :
     
-    kp1, kp2, _, _, idx1, idx2 = SIFT_feature_matching(fname1, fname2, NNDR, False)
+    kp1, kp2, _, _, idx1, idx2 = SIFT_feature_matching(img1, img2, NNDR, False)
     number_of_matching = len(idx1)
 
     matching_keypoint1 = []
@@ -95,11 +91,11 @@ def get_matching_feature(fname1, fname2, NNDR) :
     return matching_keypoint1, matching_keypoint2, number_of_matching
 
 
-def SIFT_feature_matching(fname1, fname2, ratio, showImg) :
-    kp1, des1 = get_feature_SIFT(fname1, showImg)
-    kp2, des2 = get_feature_SIFT(fname2, showImg)
+def SIFT_feature_matching(img1, img2, ratio, showImg) :
+    kp1, des1 = get_feature_SIFT(img1, showImg)
+    kp2, des2 = get_feature_SIFT(img2, showImg)
     idx1, idx2 = get_matches(des1, des2, ratio)
     if showImg :
-        image_feature_match_draw(fname1, fname2, kp1, kp2, idx1, idx2)
+        image_feature_match_draw(img1, img2, kp1, kp2, idx1, idx2)
     else :
         return kp1, kp2, des1, des2, idx1, idx2
