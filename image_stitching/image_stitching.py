@@ -148,9 +148,9 @@ def isMatching(n_f, n_i) :
         return False
 
 
-# fname_list = ['./data/school2.jpg' ,'./data/school1.jpg', './data/school3.jpg', './data/school4.jpg']
-fname_list = ['./data/school1.jpg', './data/school2.jpg', './data/school3.jpg', './data/school5.jpg',
-              './data/school8.jpg']
+fname_list = ['./data/museum2.jpg', './museum_stitching.jpg']
+# fname_list = ['./data/school1.jpg', './data/school2.jpg', './data/school3.jpg', './data/school5.jpg',
+#               './data/school8.jpg']
 
 
-image_stitching(fname_list, './output.jpg', NNDR=0.7, trial=1000)
+image_stitching(fname_list, './output.jpg', NNDR=0.7, trial=500)

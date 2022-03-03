@@ -101,26 +101,6 @@ def compute_homography(random_matching_keypoint) :
 
     return H
 
-def homography_transformation(H, image) : 
-
-    result = [] 
-    
-    width = image.shape[1]
-    height = image.shape[0]
-
-    for row in range(height) :
-        rows = []
-        
-        for column in range(width) :
-            position = np.array([row, column, 1])
-            transformation = np.matmul(H, position)
-            transformation = transformation/transformation[2]
-            rows.append(transformation)
-        
-        result.append(rows)
-
-    return result    
-
 def calculate_bounding_box_and_translate_H(img1, img2, best_H) :
 
     h1, w1 = img1.shape[:2]
