@@ -53,6 +53,12 @@ Image Stitching의 개요 정리하기 </br>
 
 Image Feature Extraction에 대해 공부하기 </br>
 
-## homewrok 8
+## homework 8
 
 Image Feature Matching에 대해 공부하기 </br>
+
+## homewrok 9 
+
+Image Warping과 Image Stitching에 대한 공부와 구현 </br>
+
+
