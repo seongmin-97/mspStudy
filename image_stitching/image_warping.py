@@ -6,7 +6,8 @@ import numpy as np
 def image_warping(img1, img2, outputfname, NNDR=0.7, trial=1000) :
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
-    best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, trial)
+    # matching_keypoint1, matching_keypoint2 = remove_outlier(matching_keypoint1, matching_keypoint2, number_of_matching, 500)
+    best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, len(matching_keypoint2), trial)
     [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
     canvas = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
     result = image_mosaicing(canvas, img2, abs(xmin), abs(ymin))
@@ -77,6 +78,54 @@ def RANSAC(kp1, kp2, number_of_matching, trial) :
     print('inlier 비율 : ', best_inlier_ratio)        
 
     return best_H, best_inlier_num
+
+def remove_outlier(kp1, kp2, number_of_matching, trial) :
+
+    best_H = np.zeros((3, 3))
+    best_inlier_ratio = 0
+
+    for i in range(trial) :
+        random_idx = random.sample(range(0, number_of_matching), 4)
+        random_matching_keypoint = []                                                           # random_matching_keypoint : 4x2x3 행렬. kp1은 [x, y, 1]
+                                                                                                # [[kp1, kp2],
+        for idx in range(len(random_idx)) :                                                     #  [kp1, kp2],                         
+            random_matching_keypoint.append([kp1[random_idx[idx]], kp2[random_idx[idx]]])       #  [kp1, kp2],
+                                                                                                #  [kp1, kp2]]
+        H = compute_homography(random_matching_keypoint)
+
+        homography_transformation_value = []
+        for index in range(number_of_matching) :
+            transformation = np.dot(H, kp1[index])
+            transformation = transformation/transformation[2]
+            homography_transformation_value.append(transformation)
+
+
+        diff = []
+        for index in range(len(homography_transformation_value)) :
+            diff.append(np.sqrt((homography_transformation_value[index][0] - kp2[index][0]) ** 2
+                              + (homography_transformation_value[index][1] - kp2[index][1]) ** 2
+                              + (homography_transformation_value[index][2] - kp2[index][2]) ** 2))
+
+
+        inlier1 = []
+        inlier2 = []
+        inlier_number = 0
+        for index in range(len(diff)) :
+            if diff[index] <= 3 :
+                inlier_number = inlier_number + 1
+        
+        inlier_ratio = inlier_number / len(diff)
+
+        if inlier_ratio > best_inlier_ratio :
+            best_inlier_ratio = inlier_ratio
+            best_diff = diff
+            
+            for index in range(len(best_diff)) :
+                if best_diff[index] <= 3 :
+                    inlier1.append(kp1[index])
+                    inlier2.append(kp2[index])
+
+    return inlier1, inlier2
         
 def compute_homography(random_matching_keypoint) :
     
