@@ -27,8 +27,12 @@ def image_blending(canvas1, canvas2, merge, seam, xmin, ymin, x_offset) :
     mask2_gaussian_pyramid = get_gaussian_pyramid(mask2)
 
     for i in range(len(mask1_gaussian_pyramid)) :
-        cv2.imwrite('./gaussianmask'+str(i)+'.jpg', mask1_gaussian_pyramid[i]*200)
+        cv2.imwrite('./gaussian1mask'+str(i)+'.jpg', mask1_gaussian_pyramid[i]*200)
         cv2.imwrite('./gaussian2mask'+str(i)+'.jpg', mask2_gaussian_pyramid[i]*200)
+        cv2.imwrite('./img1gaussianpyramid'+str(i)+'.jpg', img1_gaussian_pyramid[i])
+        cv2.imwrite('./img2gaussianpyramid'+str(i)+'.jpg', img2_gaussian_pyramid[i])
+        cv2.imwrite('./img1laplacianpyramid'+str(i)+'.jpg', img1_laplacian_pyramid[i])
+        cv2.imwrite('./img2laplacianpyramid'+str(i)+'.jpg', img2_laplacian_pyramid[i])
 
     blending_laplacian_pyramid = get_blending_laplacian_pyramid(img1_laplacian_pyramid, img2_laplacian_pyramid, mask1_gaussian_pyramid, mask2_gaussian_pyramid)
     blending_image = reconstruct(blending_laplacian_pyramid)
@@ -60,7 +64,7 @@ def get_blending_laplacian_pyramid(img1_laplacian_pyramid, img2_laplacian_pyrami
         blending.append(img1_laplacian_pyramid[i]*(mask1_gaussian_pyramid[i]) + img2_laplacian_pyramid[i]*(mask2_gaussian_pyramid[i]))
     
     for i in range(len(blending)) :
-        cv2.imwrite('./bsadf'+str(i)+'.jpg', blending[i])
+        cv2.imwrite('./blendinglaplacianpyramid'+str(i)+'.jpg', blending[i])
     return blending
 
 def get_mask(merge, seam, xmin, ymin, x_offset) :
