@@ -1,38 +1,37 @@
 import image_feature_matching as ifm
+import seam_finder_DP as sfd
+import image_blending as ib
+
 import cv2
 import random
 import numpy as np
 
-def image_warping(img1, img2, outputfname, NNDR=0.7, trial=1000) :
+def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
+
+    if (type(img1) == str) :
+        img1 = cv2.imread(img1)
+        img2 = cv2.imread(img2)
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
-    # matching_keypoint1, matching_keypoint2 = remove_outlier(matching_keypoint1, matching_keypoint2, number_of_matching, 500)
-    best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, len(matching_keypoint2), trial)
-    [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
-    canvas = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
-    result = image_mosaicing(canvas, img2, abs(xmin), abs(ymin))
-    
-    if len(outputfname) == 0 :
-        return result
-    else :
-        cv2.imwrite(outputfname, result)
-        return result
-
-def image_warping_using_fname(fname1, fname2, outputfname, NNDR=0.8, ransac_trial=1000) :
-
-    img1 = cv2.imread(fname1)
-    img2 = cv2.imread(fname2)
-
-    matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(fname1, fname2, NNDR)
     best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, ransac_trial)
-
+    
     [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
-    canvas = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
-    result = image_mosaicing(canvas, img2, abs(xmin), abs(ymin))
+    canvas1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
+    canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
+    c1 = canvas1.copy()
+    c2 = canvas2.copy()
+    _, overlap_box = get_overlap_image(canvas1, canvas2)
+    merge = image_mosaicing(canvas1, canvas2)
+    cv2.imwrite('./mosaicing.jpg', merge) 
 
-    cv2.imwrite(outputfname, result)
+    seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], False) 
+    stitched_image = seam_stitching(canvas1, canvas2, merge, seam, overlap_box[0], overlap_box[2], xmin)
+    cv2.imwrite('./usingSeamfinder.jpg', stitched_image)
 
-    return result
+    blending_image = ib.image_blending(c1, c2, stitched_image, seam, overlap_box[0], overlap_box[2], xmin)
+    cv2.imwrite('./blending_image.jpg', blending_image)
+    
+    return blending_image
 
 def RANSAC(kp1, kp2, number_of_matching, trial) :
 
@@ -53,7 +52,6 @@ def RANSAC(kp1, kp2, number_of_matching, trial) :
             transformation = np.dot(H, kp1[index])
             transformation = transformation/transformation[2]
             homography_transformation_value.append(transformation)
-
 
         diff = []
         for index in range(len(homography_transformation_value)) :
@@ -81,7 +79,6 @@ def RANSAC(kp1, kp2, number_of_matching, trial) :
 
 def remove_outlier(kp1, kp2, number_of_matching, trial) :
 
-    best_H = np.zeros((3, 3))
     best_inlier_ratio = 0
 
     for i in range(trial) :
@@ -105,7 +102,6 @@ def remove_outlier(kp1, kp2, number_of_matching, trial) :
             diff.append(np.sqrt((homography_transformation_value[index][0] - kp2[index][0]) ** 2
                               + (homography_transformation_value[index][1] - kp2[index][1]) ** 2
                               + (homography_transformation_value[index][2] - kp2[index][2]) ** 2))
-
 
         inlier1 = []
         inlier2 = []
@@ -179,17 +175,89 @@ def calculate_bounding_box_and_translate_H(img1, img2, best_H) :
 
     return bounding_box, H_matrix
 
-def image_mosaicing(canvas1, img2, x_offset, y_offset, mode=2) :
-    
-    if mode == 1 :
-        canvas1[int(abs(y_offset)):img2.shape[0]+int(abs(y_offset)), int(abs(x_offset)):img2.shape[1]+int(abs(x_offset)), :] = img2[:, :, :]
-    elif mode == 2 :
-        for i in range(len(img2)) :
-            for j in range(len(img2[0])) :
-                for k in range(len(img2[0][0])) :
-                    if canvas1[i+int(abs(y_offset))][j+int(abs(x_offset))][k] > img2[i][j][k] :
-                        canvas1[i+int(abs(y_offset))][j+int(abs(x_offset))] = canvas1[i+int(abs(y_offset))][j+int(abs(x_offset))]
-                    else :
-                        canvas1[i+int(abs(y_offset))][j+int(abs(x_offset))] = img2[i][j]
+def get_overlap_image(canvas1, canvas2) :
 
-    return canvas1
+    overlap = np.zeros_like(canvas1)
+
+    x = []
+    y = []
+
+    for i in range(len(canvas2)) :
+            for j in range(len(canvas2[0])) :
+                if (canvas1[i][j] != np.array([0, 0, 0])).any() and (canvas2[i][j] != np.array([0, 0, 0])).any() :
+                    overlap[i][j][:] = canvas1[i][j][:]
+                    y.append(i)
+                    x.append(j)
+
+    return overlap[min(x):max(x), min(y):max(y)], [min(x), max(x), min(y), max(y)]
+
+def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) :
+
+    result = np.zeros_like(canvas1)
+    # canvas 2가 왼쪽
+    index = 0
+    if x_offset == 0 :
+        for i in range(len(canvas1)) :
+            for j in range(len(canvas1[0])) :
+                for k in range(len(canvas1[0][0])) :
+                    if i <= ymin-1 or i > ymin+len(x_coordinate)-1 :
+                        result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
+                    else :
+                        if j <= xmin+x_coordinate[index] :
+                            if canvas2[i][j].sum() < 30 :
+                                result[i][j][k] = canvas1[i][j][k]
+                            else :
+                                result[i][j][k] = canvas2[i][j][k]
+                        else :
+                            if canvas1[i][j].sum() < 30 :
+                                result[i][j][k] = canvas2[i][j][k]
+                            else :
+                                result[i][j][k] = canvas1[i][j][k]
+            if i > ymin-1 and i <= ymin+len(x_coordinate)-1 :
+                index += 1
+    else :
+        for i in range(len(canvas1)) :
+            for j in range(len(canvas1[0])) :
+                for k in range(len(canvas1[0][0])) :
+                    if i <= ymin-1 or i > ymin+len(x_coordinate)-1  :
+                        result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
+                    else :
+                        if j <= xmin+x_coordinate[index] :
+                            if canvas1[i][j].sum() < 30 :
+                                result[i][j][k] = canvas2[i][j][k]
+                            else :
+                                result[i][j][k] = canvas1[i][j][k]
+                        else :
+                            if canvas2[i][j].sum() < 30 :
+                                result[i][j][k] = canvas1[i][j][k]
+                            else :
+                                result[i][j][k] = canvas2[i][j][k]
+            if i > ymin-1 and i <= ymin+len(x_coordinate)-1 :
+                index += 1
+
+    return result
+
+def image_mosaicing(canvas1, canvas2) :
+
+    merge = np.zeros_like(canvas1)
+
+    for i in range(len(canvas2)) :
+        for j in range(len(canvas2[0])) :
+            for k in range(len(canvas2[0][0])) :
+                if canvas1[i][j][k] > canvas2[i][j][k] :
+                    merge[i][j] = canvas1[i][j]
+                else :
+                    merge[i][j] = canvas2[i][j]
+
+    return merge
+
+def get_img2_canvas(shape, img2, xmin, ymin) :
+        
+    canvas2 = np.zeros(shape)
+
+    for i in range(len(img2)) :
+        for j in range(len(img2[0])) :
+            for k in range(len(img2[0][0])) :
+                canvas2[i+int(abs(ymin))][j+int(abs(xmin))][k] = img2[i][j][k]
+
+    return canvas2

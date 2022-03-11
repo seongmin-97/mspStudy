@@ -14,9 +14,7 @@ def image_stitching(fname_list, outputfname, NNDR=0.5, trial=500) :
     print("매칭 관계 : ", matching_graph)
     print("-------------------------------")
 
-    output = all_image_warping(img_list, matching_graph, NNDR, trial)
-    cv2.imwrite(outputfname, output)
-    return None
+    all_image_warping(img_list, matching_graph, NNDR, trial)
 
 def read_image_list(fname_list) :
 
@@ -34,6 +32,7 @@ def all_image_warping(img_list, matching_graph, NNDR, trial) :
     queue = deque([0])
     end_warping = []
     start = 0
+    warped_image = []
 
     while queue :
         img_pair = queue.popleft()
@@ -43,7 +42,7 @@ def all_image_warping(img_list, matching_graph, NNDR, trial) :
         for pair in matching_graph[img_pair] :
             # 이미 와핑이 된 경우인지 확인 
             # ex) [0, 3]이 완료되었으면 [3, 0]은 안해도 된다.
-            if [pair[1], pair[0]] in end_warping :
+            if [pair[1], pair[0]] in end_warping or pair[1] in warped_image :
                 continue
             print(pair)
             if start == 0 :
@@ -51,6 +50,8 @@ def all_image_warping(img_list, matching_graph, NNDR, trial) :
                 start = 1
             else :
                 result = iw.image_warping(img_list[pair[1]], result, '', NNDR, trial)
+
+            warped_image.append(pair[1])
             end_warping.append(pair)
         # BFS
         for data in matching_graph[img_pair] :
@@ -134,7 +135,7 @@ def isMatching(n_f, n_i) :
     p1 = 0.6 # 
     p0 = 0.1
     p_m1 = 0.000001
-    p_m0 = 1-p_m1
+    p_m0 = 1 - p_m1
     p_min = 0.999
 
     f_when_p_m1 = math.comb(n_f, n_i) * (p1 ** n_i) * ((1 - p1) ** (n_f - n_i))
@@ -148,10 +149,8 @@ def isMatching(n_f, n_i) :
         return False
 
 
-fname_list = ['./data/school1.jpg', './data/school2.jpg']
-# fname_list = ['./data/school1.jpg', './data/school2.jpg', './data/school3.jpg', './data/school5.jpg',
-#               './data/school8.jpg']
-
-for i in [0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8] :
-    image_stitching(fname_list, './output_'+str(i)+'.jpg', NNDR=0.7, trial=500)
-    print('NNDR = ', i, ' finished')
+fname_list = ['./data/museum1.jpg', './data/museum3.jpg']
+# fname_list = ['./data/school3.jpg', './result/output_0.7.jpg']
+image_stitching(fname_list, './output1.jpg', NNDR=0.7, trial=500)
+# fname_list = ['./data/museum5.jpg', './output1.jpg']
+# image_stitching(fname_list, './output2.jpg', NNDR=0.7, trial=500)
