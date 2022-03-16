@@ -20,11 +20,13 @@ def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
     canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
     c1 = canvas1.copy()
     c2 = canvas2.copy()
+    cv2.imwrite('./cavnas1.jpg', c1)
+    cv2.imwrite('./canvas2.jpg', c2)
     _, overlap_box = get_overlap_image(canvas1, canvas2)
     merge = image_mosaicing(canvas1, canvas2)
     cv2.imwrite('./mosaicing.jpg', merge) 
 
-    seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], False) 
+    seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], True) 
     stitched_image = seam_stitching(canvas1, canvas2, merge, seam, overlap_box[0], overlap_box[2], xmin)
     cv2.imwrite('./usingSeamfinder.jpg', stitched_image)
 
@@ -204,12 +206,12 @@ def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) 
                         result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
                     else :
                         if j <= xmin+x_coordinate[index] :
-                            if canvas2[i][j].sum() < 30 :
+                            if canvas2[i][j].sum() < 10 :
                                 result[i][j][k] = canvas1[i][j][k]
                             else :
                                 result[i][j][k] = canvas2[i][j][k]
                         else :
-                            if canvas1[i][j].sum() < 30 :
+                            if canvas1[i][j].sum() < 10 :
                                 result[i][j][k] = canvas2[i][j][k]
                             else :
                                 result[i][j][k] = canvas1[i][j][k]
@@ -223,12 +225,12 @@ def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) 
                         result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
                     else :
                         if j <= xmin+x_coordinate[index] :
-                            if canvas1[i][j].sum() < 30 :
+                            if canvas1[i][j].sum() < 10 :
                                 result[i][j][k] = canvas2[i][j][k]
                             else :
                                 result[i][j][k] = canvas1[i][j][k]
                         else :
-                            if canvas2[i][j].sum() < 30 :
+                            if canvas2[i][j].sum() < 10 :
                                 result[i][j][k] = canvas1[i][j][k]
                             else :
                                 result[i][j][k] = canvas2[i][j][k]

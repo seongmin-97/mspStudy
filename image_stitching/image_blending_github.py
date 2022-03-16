@@ -6,7 +6,7 @@ import scipy
 from scipy.ndimage.filters import convolve1d
 import matplotlib.pyplot as plt
 import os
-
+import cv2
 MIN_DIM = 16
 GRAY = 1
 RGB = 2
@@ -73,7 +73,7 @@ def build_laplacian_pyramid(im, max_levels, filter_size):
     gauss_pyr, filter_vec = build_gaussian_pyramid(im.copy(), max_levels, filter_size)
     pyr = []
     for i in range(len(gauss_pyr) - 1):
-        laplacian = gauss_pyr[i] - expand(gauss_pyr[i + 1].copy(), filter_vec * 2.0)
+        laplacian = gauss_pyr[i] - cv2.resize(expand(gauss_pyr[i + 1].copy(), filter_vec * 2.0), dsize=(len(gauss_pyr[i][0]), len(gauss_pyr[i])))
         pyr.append(laplacian)
     pyr.append(gauss_pyr[-1])
     return pyr, filter_vec
@@ -120,7 +120,7 @@ def laplacian_to_image(lpyr, filter_vec, coeff):
     im = lpyr[-1] * coeff[-1]
     for i in range(len(lpyr) - 2, -1, -1):
         lpyr[i] *= coeff[i]
-        im = expand(im, filter_vec * 2.0) + lpyr[i]
+        im = cv2.resize(expand(im, filter_vec * 2.0), dsize=(len(lpyr[i][0]), len(lpyr[i]))) + lpyr[i]
     return im
 
 
@@ -235,7 +235,6 @@ def blending_example(im1_name, im2_name, mask_name):
     return im1, im2, mask.astype(np.bool), im_blend
 
 def relpath(filename):
-    filename = 'external/' + filename
     return os.path.join(os.path.dirname(__file__), filename)
 
 
@@ -254,3 +253,5 @@ def blending_example2():
     :return: the two images to blend, the mask and the blended image
     """
     return blending_example("nyc.jpg", "puddle.jpg", "puddle_mask.jpg")
+
+blending_example('./canvas1.jpg', './canvas2.jpg', './mask1.jpg')

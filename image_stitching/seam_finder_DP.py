@@ -10,8 +10,8 @@ def seam_finder(image, draw=False) :
     if draw :
         seam_image = draw_seam(image, x_coordinate)
 
-        cv2.imwrite('./seamFinder.jpg', seam_image)
-        return x_coordinate, seam_image
+        cv2.imwrite('./seam.jpg', seam_image)
+        return x_coordinate
 
     return x_coordinate
 
