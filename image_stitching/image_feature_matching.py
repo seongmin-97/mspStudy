@@ -6,10 +6,9 @@ import matplotlib.pyplot as plt
 
 def get_feature_SIFT(img1, showImg) :
     # 이미지 불러오기
-    
+    img1 = img1.astype(np.uint8)
     # 색상변환
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-
     # SIFT
     sift = cv2.xfeatures2d.SIFT_create()
 

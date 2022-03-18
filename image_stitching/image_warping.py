@@ -8,18 +8,19 @@ import numpy as np
 
 def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
 
-    if (type(img1) == str) :
-        img1 = cv2.imread(img1)
-        img2 = cv2.imread(img2)
+    # if (type(img1) == str) :
+    #     img1 = cv2.imread(img1)
+    #     img2 = cv2.imread(img2)
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
     best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, ransac_trial)
     
     [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
     canvas1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
+    c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
+    cv2.imwrite('./cavnas1.jpg', canvas1)
     canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
-    c1 = canvas1.copy()
-    c2 = canvas2.copy()
+    c2 = image_mirroring(canvas2, img2.shape)
     cv2.imwrite('./cavnas1.jpg', c1)
     cv2.imwrite('./canvas2.jpg', c2)
     _, overlap_box = get_overlap_image(canvas1, canvas2)
@@ -30,7 +31,7 @@ def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
     stitched_image = seam_stitching(canvas1, canvas2, merge, seam, overlap_box[0], overlap_box[2], xmin)
     cv2.imwrite('./usingSeamfinder.jpg', stitched_image)
 
-    blending_image = ib.image_blending(c1, c2, stitched_image, seam, overlap_box[0], overlap_box[2], xmin)
+    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin)
     cv2.imwrite('./blending_image.jpg', blending_image)
     
     return blending_image
@@ -261,5 +262,46 @@ def get_img2_canvas(shape, img2, xmin, ymin) :
         for j in range(len(img2[0])) :
             for k in range(len(img2[0][0])) :
                 canvas2[i+int(abs(ymin))][j+int(abs(xmin))][k] = img2[i][j][k]
-
+    
     return canvas2
+
+def image_mirroring(canvas, shape) :
+
+    mirrored_canvas = canvas.copy()
+
+    left = 0
+    right = 0
+    top = 0
+    bottom = 0
+
+    for row in range(canvas.shape[0]) :
+        for column in range(canvas.shape[1]) :
+            if (canvas[row][column] != np.array([0, 0, 0])).any() and left == 0 :
+                for i in range(shape[1]) :
+                    if column-i >= 0 :
+                        mirrored_canvas[row][column-i] = canvas[row][column+(i)]
+                left = 1
+            elif (canvas[row][column] != np.array([0, 0, 0])).any() and right == 0 :
+                for i in range(shape[1]) :
+                    if column+shape[1]+i < canvas.shape[1] :
+                        mirrored_canvas[row][column+shape[1]+i] = canvas[row][column+shape[1]-(i)]
+                right = 1
+        left = 0
+        right = 0
+
+    for column in range(canvas.shape[1]) :
+        for row in range(canvas.shape[0]) :
+            if (canvas[row][column] != np.array([0, 0, 0])).any() and top == 0 :
+                for i in range(shape[0]) :
+                    if row-i >= 0 :
+                        mirrored_canvas[row-i][column] = canvas[row+(i)][column]
+                top = 1
+            elif (canvas[row][column] != np.array([0, 0, 0])).any() and bottom == 0 :
+                for i in range(shape[0]) :
+                    if row+shape[0]+i < canvas.shape[0] :
+                        mirrored_canvas[row+shape[0]+i][column] = canvas[row+shape[0]-(i)][column]
+                bottom = 1
+        top = 0
+        right = 0
+
+    return mirrored_canvas

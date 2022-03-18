@@ -1,25 +1,28 @@
+from unicodedata import mirrored
 import cv2
 import numpy as np
 from scipy.ndimage.filters import convolve1d
 
-def image_blending(canvas1, canvas2, merge, seam, xmin, ymin, x_offset) :
+def image_blending(canvas1, canvas2, c1, c2, merge, seam, overlapBox, x_offset) :
 
     if type(canvas1) == str :
         canvas1 = cv2.imread(canvas1)
         canvas2 = cv2.imread(canvas2)
 
-    mask1 = get_mask(merge, seam, xmin, ymin, x_offset)
+
+
+    mask1 = get_mask(canvas1, seam, overlapBox[0], overlapBox[2], x_offset)
     if x_offset == 0 :
         x = 1
     else :
         x = 0
-    mask2 = get_mask(merge, seam, xmin, ymin, x)
+    mask2 = get_mask(canvas2, seam, overlapBox[0], overlapBox[2], x)
 
-    cv2.imwrite('./mask1.jpg', mask1*200)
-    cv2.imwrite('./mask2.jpg', (1-mask1)*200)
+    cv2.imwrite('./mask1.jpg', mask1*255)
+    cv2.imwrite('./mask2.jpg', mask2*255)
 
-    img1_gaussian_pyramid = get_gaussian_pyramid(canvas1)
-    img2_gaussian_pyramid = get_gaussian_pyramid(canvas2)
+    img1_gaussian_pyramid = get_gaussian_pyramid(c1)
+    img2_gaussian_pyramid = get_gaussian_pyramid(c2)
     
     img1_laplacian_pyramid = get_laplacian_pyramid(img1_gaussian_pyramid)
     img2_laplacian_pyramid = get_laplacian_pyramid(img2_gaussian_pyramid)
@@ -27,16 +30,11 @@ def image_blending(canvas1, canvas2, merge, seam, xmin, ymin, x_offset) :
     mask1_gaussian_pyramid = get_gaussian_pyramid(mask1)
     mask2_gaussian_pyramid = get_gaussian_pyramid(mask2)
 
-    for i in range(len(mask1_gaussian_pyramid)) :
-        cv2.imwrite('./gaussian1mask'+str(i)+'.jpg', mask1_gaussian_pyramid[i]*200)
-        cv2.imwrite('./gaussian2mask'+str(i)+'.jpg', mask2_gaussian_pyramid[i]*200)
-        cv2.imwrite('./img1gaussianpyramid'+str(i)+'.jpg', img1_gaussian_pyramid[i])
-        cv2.imwrite('./img2gaussianpyramid'+str(i)+'.jpg', img2_gaussian_pyramid[i])
-        cv2.imwrite('./img1laplacianpyramid'+str(i)+'.jpg', img1_laplacian_pyramid[i])
-        cv2.imwrite('./img2laplacianpyramid'+str(i)+'.jpg', img2_laplacian_pyramid[i])
-
-    blending_laplacian_pyramid = get_blending_laplacian_pyramid(img1_laplacian_pyramid, img2_laplacian_pyramid, mask1_gaussian_pyramid, mask2_gaussian_pyramid)
+    blending_laplacian_pyramid = get_blending_laplacian_pyramid(img1_laplacian_pyramid, mask1_gaussian_pyramid, img2_laplacian_pyramid, mask2_gaussian_pyramid)
     blending_image = reconstruct(blending_laplacian_pyramid)
+
+    merge_mask = get_mask(merge, seam, 0, 0, 0, False)
+    blending_image = blending_image * merge_mask
 
     return blending_image
 
@@ -56,50 +54,57 @@ def reconstruct(blending_laplacian_pyramid) :
 
     return recon_result
 
-def get_blending_laplacian_pyramid(img1_laplacian_pyramid, img2_laplacian_pyramid, mask1_gaussian_pyramid, mask2_gaussian_pyramid) :
+def get_blending_laplacian_pyramid(img1_laplacian_pyramid, mask1_gaussian_pyramid, img2_laplacian_pyramid, mask2_gaussian_pyramid) :
 
     blending = []
 
     for i in range(len(img1_laplacian_pyramid)) :
-        blending.append(img1_laplacian_pyramid[i]*(mask1_gaussian_pyramid[i]) + img2_laplacian_pyramid[i]*(1-mask1_gaussian_pyramid[i]))
+        blending.append(img1_laplacian_pyramid[i]*(mask1_gaussian_pyramid[i]) + img2_laplacian_pyramid[i]*(mask2_gaussian_pyramid[i]))
     
     for i in range(len(blending)) :
         cv2.imwrite('./blendinglaplacianpyramid'+str(i)+'.jpg', blending[i])
     return blending
 
-def get_mask(merge, seam, xmin, ymin, x_offset) :
+def get_mask(merge, seam, xmin, ymin, x_offset, seperateImage=True) :
 
     mask = np.zeros_like(merge)
     index = 0
-
-    if x_offset == 0 :
-        for row in range(mask.shape[0]) :
-            for column in range(mask.shape[1]) :
-                if (merge[row][column] == np.array([0, 0, 0])).all() :
-                    mask[row][column] = np.array([1, 1, 1])
-                elif row <= ymin-1 or row > ymin+len(seam)-1 :
-                    mask[row][column] = np.array([1, 1, 1])
-                else :
-                    if column <= xmin+seam[index] :
+    if seperateImage :
+        if x_offset == 0 :
+            for row in range(mask.shape[0]) :
+                for column in range(mask.shape[1]) :
+                    if (merge[row][column] == np.array([0, 0, 0])).all() :
                         mask[row][column] = np.array([0, 0, 0])
-                    else :
+                    elif row <= ymin-1 or row > ymin+len(seam)-1 :
                         mask[row][column] = np.array([1, 1, 1])
-            if row > ymin-1 and row <= ymin+len(seam)-1 :
-                index += 1 
+                    else :
+                        if column <= xmin+seam[index] :
+                            mask[row][column] = np.array([0, 0, 0])
+                        else :
+                            mask[row][column] = np.array([1, 1, 1])
+                if row > ymin-1 and row <= ymin+len(seam)-1 :
+                    index += 1 
+        else :
+            for row in range(mask.shape[0]) :
+                for column in range(mask.shape[1]) :
+                    if (merge[row][column] == np.array([0, 0, 0])).all() :
+                        mask[row][column] = np.array([0, 0, 0])
+                    elif row <= ymin-1 or row > ymin+len(seam)-1 :
+                        mask[row][column] = np.array([1, 1, 1])
+                    else :
+                        if column <= xmin+seam[index] :
+                            mask[row][column] = np.array([1, 1, 1])
+                        else :
+                            mask[row][column] = np.array([0, 0, 0])
+                if row > ymin-1 and row <= ymin+len(seam)-1 :
+                    index += 1 
     else :
         for row in range(mask.shape[0]) :
             for column in range(mask.shape[1]) :
                 if (merge[row][column] == np.array([0, 0, 0])).all() :
-                    mask[row][column] = np.array([1, 1, 1])
-                elif row <= ymin-1 or row > ymin+len(seam)-1 :
-                    mask[row][column] = np.array([1, 1, 1])
+                    mask[row][column] = np.array([0, 0, 0])
                 else :
-                    if column <= xmin+seam[index] :
-                        mask[row][column] = np.array([1, 1, 1])
-                    else :
-                        mask[row][column] = np.array([0, 0, 0])
-            if row > ymin-1 and row <= ymin+len(seam)-1 :
-                index += 1 
+                    mask[row][column] = np.array([1, 1, 1])
 
     return mask
 
@@ -122,15 +127,16 @@ def get_laplacian_pyramid(gaussian_pyramid) :
 
 def get_gaussian_pyramid(image) :
 
+    
     gaussian_pyramid = []
     image = image.astype(np.float32)
     gaussian_pyramid.append(image)
 
     i = 0
     while len(gaussian_pyramid) < 5 :
-        
+
         blurred = cv2.GaussianBlur(gaussian_pyramid[i], (5, 5), 1)
-        
+
         blurred = image_downsampling(blurred)
         gaussian_pyramid.append(blurred)
 
@@ -162,6 +168,7 @@ def image_upsampling(image, size) :
     resized_image = cv2.resize(image, dsize=(size[1], size[0]))
 
     return resized_image
+
 
 # def expand(im, filter_vec):
 #     """
