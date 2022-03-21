@@ -1,15 +1,11 @@
-from unicodedata import mirrored
 import cv2
 import numpy as np
-from scipy.ndimage.filters import convolve1d
 
-def image_blending(canvas1, canvas2, c1, c2, merge, seam, overlapBox, x_offset) :
+def image_blending(canvas1, canvas2, c1, c2, merge, seam, overlapBox, x_offset, write=False) :
 
     if type(canvas1) == str :
         canvas1 = cv2.imread(canvas1)
         canvas2 = cv2.imread(canvas2)
-
-
 
     mask1 = get_mask(canvas1, seam, overlapBox[0], overlapBox[2], x_offset)
     if x_offset == 0 :
@@ -26,10 +22,14 @@ def image_blending(canvas1, canvas2, c1, c2, merge, seam, overlapBox, x_offset) 
     
     img1_laplacian_pyramid = get_laplacian_pyramid(img1_gaussian_pyramid)
     img2_laplacian_pyramid = get_laplacian_pyramid(img2_gaussian_pyramid)
+    
+    if write :
+        for i in range(len(img2_laplacian_pyramid)) :
+            cv2.imwrite('./blending_laplacian'+str(i)+'.jpg', img2_laplacian_pyramid[i])
 
     mask1_gaussian_pyramid = get_gaussian_pyramid(mask1)
     mask2_gaussian_pyramid = get_gaussian_pyramid(mask2)
-
+    
     blending_laplacian_pyramid = get_blending_laplacian_pyramid(img1_laplacian_pyramid, mask1_gaussian_pyramid, img2_laplacian_pyramid, mask2_gaussian_pyramid)
     blending_image = reconstruct(blending_laplacian_pyramid)
 
@@ -61,8 +61,6 @@ def get_blending_laplacian_pyramid(img1_laplacian_pyramid, mask1_gaussian_pyrami
     for i in range(len(img1_laplacian_pyramid)) :
         blending.append(img1_laplacian_pyramid[i]*(mask1_gaussian_pyramid[i]) + img2_laplacian_pyramid[i]*(mask2_gaussian_pyramid[i]))
     
-    for i in range(len(blending)) :
-        cv2.imwrite('./blendinglaplacianpyramid'+str(i)+'.jpg', blending[i])
     return blending
 
 def get_mask(merge, seam, xmin, ymin, x_offset, seperateImage=True) :
@@ -152,34 +150,7 @@ def image_downsampling(image) :
 
 def image_upsampling(image, size) :
 
-    # resized_image = np.zeros((size[0], size[1], size[2]))
-
-    # for i in range(resized_image.shape[0]) :
-    #     for j in range(resized_image.shape[1]) :
-    #         for k in range(resized_image.shape[2]) :
-    #             if i % 2 == 0  :
-    #                 if i // 2 < image.shape[0] :
-    #                     resized_image[i][j][k] = image[i//2][j//2][k]
-    #                 else :
-    #                     resized_image[i][j][k] = 0
-    #             else :
-    #                 resized_image[i][j][k] = 0
     resized_image = cv2.pyrUp(image)
     resized_image = cv2.resize(image, dsize=(size[1], size[0]))
 
     return resized_image
-
-
-# def expand(im, filter_vec):
-#     """
-#     expands a given image by 2
-#     :param im: the image to reduce
-#     :param filter_vec: the filter_vec to blur the image with
-#     :return: the image after expanding
-#     """
-#     length, width = im.shape
-#     filter_vec = filter_vec.copy()
-#     expanded_im = np.insert(im, np.arange(1, length + 1), 0, axis=0)
-#     expanded_im = np.insert(expanded_im, np.arange(1, width + 1), 0, axis=1)
-#     return convolve1d(convolve1d(expanded_im, filter_vec[0], mode='constant').T, filter_vec[0], mode='constant').T
-#     return resized_image

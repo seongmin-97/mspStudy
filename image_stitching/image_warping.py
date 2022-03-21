@@ -1,4 +1,6 @@
+from typing import overload
 import image_feature_matching as ifm
+import illumination_compensation as ic
 import seam_finder_DP as sfd
 import image_blending as ib
 
@@ -8,32 +10,31 @@ import numpy as np
 
 def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
 
-    # if (type(img1) == str) :
-    #     img1 = cv2.imread(img1)
-    #     img2 = cv2.imread(img2)
-
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
     best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, ransac_trial)
     
     [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
     canvas1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
-    c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
-    cv2.imwrite('./cavnas1.jpg', canvas1)
     canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
-    c2 = image_mirroring(canvas2, img2.shape)
-    cv2.imwrite('./cavnas1.jpg', c1)
-    cv2.imwrite('./canvas2.jpg', c2)
-    _, overlap_box = get_overlap_image(canvas1, canvas2)
+
+    overlap_mask, overlap_box = get_overlap_image(canvas1, canvas2)
+
+    g = ic.gain_based_esposure_compensation(canvas1, canvas2, overlap_mask)
+    canvas1 = g[0] * canvas1
+    canvas2 = g[1] * canvas2
+
     merge = image_mosaicing(canvas1, canvas2)
-    cv2.imwrite('./mosaicing.jpg', merge) 
-
-    seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], True) 
-    stitched_image = seam_stitching(canvas1, canvas2, merge, seam, overlap_box[0], overlap_box[2], xmin)
-    cv2.imwrite('./usingSeamfinder.jpg', stitched_image)
-
-    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin)
-    cv2.imwrite('./blending_image.jpg', blending_image)
     
+    seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], True) 
+    stitched_image = seam_stitching(canvas1, canvas2, seam, overlap_box[0], overlap_box[2], xmin)
+
+    c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
+    c1 = g[0] * c1
+    c2 = image_mirroring(canvas2, img2.shape)
+    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin, True)
+    
+    cv2.imwrite('./canvas1.jpg', c1)
+    cv2.imwrite('./canvas2.jpg', c2)
     return blending_image
 
 def RANSAC(kp1, kp2, number_of_matching, trial) :
@@ -180,7 +181,7 @@ def calculate_bounding_box_and_translate_H(img1, img2, best_H) :
 
 def get_overlap_image(canvas1, canvas2) :
 
-    overlap = np.zeros_like(canvas1)
+    overlap_mask = np.zeros_like(canvas1)
 
     x = []
     y = []
@@ -188,13 +189,13 @@ def get_overlap_image(canvas1, canvas2) :
     for i in range(len(canvas2)) :
             for j in range(len(canvas2[0])) :
                 if (canvas1[i][j] != np.array([0, 0, 0])).any() and (canvas2[i][j] != np.array([0, 0, 0])).any() :
-                    overlap[i][j][:] = canvas1[i][j][:]
+                    overlap_mask[i][j][:] = np.array([1, 1, 1])
                     y.append(i)
                     x.append(j)
 
-    return overlap[min(x):max(x), min(y):max(y)], [min(x), max(x), min(y), max(y)]
+    return overlap_mask, [min(x), max(x), min(y), max(y)]
 
-def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) :
+def seam_stitching(canvas1, canvas2, x_coordinate, xmin, ymin, x_offset) :
 
     result = np.zeros_like(canvas1)
     # canvas 2가 왼쪽
@@ -206,6 +207,7 @@ def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) 
                     if i <= ymin-1 or i > ymin+len(x_coordinate)-1 :
                         result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
                     else :
+                        # 밝기가 어두우면 다른 캔버스의 픽셀로 대체하는 이유는 검은 공백을 메우기 위해서이다.
                         if j <= xmin+x_coordinate[index] :
                             if canvas2[i][j].sum() < 10 :
                                 result[i][j][k] = canvas1[i][j][k]
@@ -225,6 +227,7 @@ def seam_stitching(canvas1, canvas2, merge, x_coordinate, xmin, ymin, x_offset) 
                     if i <= ymin-1 or i > ymin+len(x_coordinate)-1  :
                         result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
                     else :
+                        # 밝기가 어두우면 다른 캔버스의 픽셀로 대체하는 이유는 검은 공백을 메우기 위해서이다.
                         if j <= xmin+x_coordinate[index] :
                             if canvas1[i][j].sum() < 10 :
                                 result[i][j][k] = canvas2[i][j][k]

@@ -14,7 +14,9 @@ def image_stitching(fname_list, outputfname, NNDR=0.5, trial=500) :
     print("매칭 관계 : ", matching_graph)
     print("-------------------------------")
 
-    all_image_warping(img_list, matching_graph, NNDR, trial)
+    result = all_image_warping(img_list, matching_graph, NNDR, trial)
+
+    cv2.imwrite(outputfname, result)
 
 def read_image_list(fname_list) :
 
