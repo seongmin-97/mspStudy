@@ -57,8 +57,12 @@ Image Feature Extraction에 대해 공부하기 </br>
 
 Image Feature Matching에 대해 공부하기 </br>
 
-## homewrok 9 
+## homework 9 
 
 Image Warping과 Image Stitching에 대한 공부와 구현 </br>
+
+## homework 10
+
+Seam Finder와 Image Blending에 대한 공부와 구현 </br>
 
 
