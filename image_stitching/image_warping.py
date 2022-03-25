@@ -1,4 +1,3 @@
-from typing import overload
 import image_feature_matching as ifm
 import illumination_compensation as ic
 import seam_finder_DP as sfd
@@ -16,7 +15,8 @@ def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
     [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
     canvas1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
     canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
-
+    cv2.imwrite('./canvas1.jpg', canvas1)
+    cv2.imwrite('./canvas2.jpg', canvas2)
     overlap_mask, overlap_box = get_overlap_image(canvas1, canvas2)
 
     g = ic.gain_based_esposure_compensation(canvas1, canvas2, overlap_mask)
@@ -31,10 +31,10 @@ def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
     c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
     c1 = g[0] * c1
     c2 = image_mirroring(canvas2, img2.shape)
-    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin, True)
+    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin)
     
-    cv2.imwrite('./canvas1.jpg', c1)
-    cv2.imwrite('./canvas2.jpg', c2)
+    cv2.imwrite('./c1.jpg', c1)
+    cv2.imwrite('./c2.jpg', c2)
     return blending_image
 
 def RANSAC(kp1, kp2, number_of_matching, trial) :
