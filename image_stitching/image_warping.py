@@ -7,35 +7,59 @@ import cv2
 import random
 import numpy as np
 
-def image_warping(img1, img2, outputfname, NNDR=0.7, ransac_trial=1000) :
+def image_warping(img1, img2, NNDR=0.7, ransac_trial=500, mask = None, i=0) :
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
     best_H, _ = RANSAC(matching_keypoint1, matching_keypoint2, number_of_matching, ransac_trial)
     
-    [xmin, xmax, ymin, ymax], H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
-    canvas1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin))
-    canvas2 = get_img2_canvas(canvas1.shape, img2, xmin, ymin)
-    cv2.imwrite('./canvas1.jpg', canvas1)
-    cv2.imwrite('./canvas2.jpg', canvas2)
-    overlap_mask, overlap_box = get_overlap_image(canvas1, canvas2)
+    boundingBox, H_matrix = calculate_bounding_box_and_translate_H(img1, img2, best_H)
+    canvas1 = cv2.warpPerspective(img1, H_matrix, (boundingBox[1]-boundingBox[0], boundingBox[3]-boundingBox[2]))
+    canvas2 = get_img2_canvas(canvas1.shape, img2, boundingBox[0], boundingBox[2])    
 
-    g = ic.gain_based_esposure_compensation(canvas1, canvas2, overlap_mask)
-    canvas1 = g[0] * canvas1
-    canvas2 = g[1] * canvas2
+    translate_matrix = np.array([[1, 0, -boundingBox[0]], [0, 1, -boundingBox[2]], [0, 0, 1]])
 
+    overlap_box = sfd.get_overlap_image(canvas1, canvas2)
     merge = image_mosaicing(canvas1, canvas2)
     
     seam = sfd.seam_finder(merge[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]], True) 
-    stitched_image = seam_stitching(canvas1, canvas2, seam, overlap_box[0], overlap_box[2], xmin)
-
-    c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
-    c1 = g[0] * c1
-    c2 = image_mirroring(canvas2, img2.shape)
-    blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin)
+    # stitched_image = seam_stitching(canvas1, canvas2, seam, overlap_box[0], overlap_box[2], boundingBox[0])
     
-    cv2.imwrite('./c1.jpg', c1)
-    cv2.imwrite('./c2.jpg', c2)
-    return blending_image
+    # mask2는 여태까지 모든 마스크의 리스트
+    # x_offset 지정
+    if mask != None  :
+
+        for i in range(len(mask)) :
+            mask[i] = get_img2_canvas(canvas1.shape, mask[i], boundingBox[0], boundingBox[2])
+        
+        coordinate = np.array([0, 0, 1])@best_H
+        if boundingBox[0] < coordinate[0]:
+            mask1 = ib.get_mask(canvas1, seam, overlap_box[0], overlap_box[2], 1)
+            previous_hole_mask = ib.get_mask(canvas2, seam, overlap_box[0], overlap_box[2], 0)
+        else :
+            mask1 = ib.get_mask(canvas1, seam, overlap_box[0], overlap_box[2], 0)
+            previous_hole_mask = ib.get_mask(canvas2, seam, overlap_box[0], overlap_box[2], 1)
+        
+        cv2.imwrite('previous_whole_mask'+str(i)+'.jpg', previous_hole_mask*255)
+        
+        for i in range(len(mask)) :
+            mask[i] = cv2.bitwise_and(previous_hole_mask, mask[i])
+
+        mask.append(mask1)
+        return merge, H_matrix, translate_matrix, boundingBox, mask
+        
+    else :
+        if overlap_box[0] == 0 :
+            x = 1
+        else :
+            x = 0
+        mask1 = ib.get_mask(canvas1, seam, overlap_box[0], overlap_box[2], overlap_box[0])
+        mask2 = ib.get_mask(canvas2, seam, overlap_box[0], overlap_box[2], x)
+    
+    # c1 = cv2.warpPerspective(img1, H_matrix, (xmax-xmin, ymax-ymin), borderMode=cv2.BORDER_REFLECT)
+    # c2 = image_mirroring(canvas2, img2.shape)
+    # blending_image = ib.image_blending(canvas1, canvas2, c1, c2, stitched_image, seam, overlap_box, xmin)
+    
+        return merge, H_matrix, translate_matrix, boundingBox, [mask1, mask2]
 
 def RANSAC(kp1, kp2, number_of_matching, trial) :
 
@@ -81,52 +105,6 @@ def RANSAC(kp1, kp2, number_of_matching, trial) :
 
     return best_H, best_inlier_num
 
-def remove_outlier(kp1, kp2, number_of_matching, trial) :
-
-    best_inlier_ratio = 0
-
-    for i in range(trial) :
-        random_idx = random.sample(range(0, number_of_matching), 4)
-        random_matching_keypoint = []                                                           # random_matching_keypoint : 4x2x3 행렬. kp1은 [x, y, 1]
-                                                                                                # [[kp1, kp2],
-        for idx in range(len(random_idx)) :                                                     #  [kp1, kp2],                         
-            random_matching_keypoint.append([kp1[random_idx[idx]], kp2[random_idx[idx]]])       #  [kp1, kp2],
-                                                                                                #  [kp1, kp2]]
-        H = compute_homography(random_matching_keypoint)
-
-        homography_transformation_value = []
-        for index in range(number_of_matching) :
-            transformation = np.dot(H, kp1[index])
-            transformation = transformation/transformation[2]
-            homography_transformation_value.append(transformation)
-
-
-        diff = []
-        for index in range(len(homography_transformation_value)) :
-            diff.append(np.sqrt((homography_transformation_value[index][0] - kp2[index][0]) ** 2
-                              + (homography_transformation_value[index][1] - kp2[index][1]) ** 2
-                              + (homography_transformation_value[index][2] - kp2[index][2]) ** 2))
-
-        inlier1 = []
-        inlier2 = []
-        inlier_number = 0
-        for index in range(len(diff)) :
-            if diff[index] <= 3 :
-                inlier_number = inlier_number + 1
-        
-        inlier_ratio = inlier_number / len(diff)
-
-        if inlier_ratio > best_inlier_ratio :
-            best_inlier_ratio = inlier_ratio
-            best_diff = diff
-            
-            for index in range(len(best_diff)) :
-                if best_diff[index] <= 3 :
-                    inlier1.append(kp1[index])
-                    inlier2.append(kp2[index])
-
-    return inlier1, inlier2
-        
 def compute_homography(random_matching_keypoint) :
     
     A = []
@@ -179,22 +157,6 @@ def calculate_bounding_box_and_translate_H(img1, img2, best_H) :
 
     return bounding_box, H_matrix
 
-def get_overlap_image(canvas1, canvas2) :
-
-    overlap_mask = np.zeros_like(canvas1)
-
-    x = []
-    y = []
-
-    for i in range(len(canvas2)) :
-            for j in range(len(canvas2[0])) :
-                if (canvas1[i][j] != np.array([0, 0, 0])).any() and (canvas2[i][j] != np.array([0, 0, 0])).any() :
-                    overlap_mask[i][j][:] = np.array([1, 1, 1])
-                    y.append(i)
-                    x.append(j)
-
-    return overlap_mask, [min(x), max(x), min(y), max(y)]
-
 def seam_stitching(canvas1, canvas2, x_coordinate, xmin, ymin, x_offset) :
 
     result = np.zeros_like(canvas1)
@@ -205,7 +167,10 @@ def seam_stitching(canvas1, canvas2, x_coordinate, xmin, ymin, x_offset) :
             for j in range(len(canvas1[0])) :
                 for k in range(len(canvas1[0][0])) :
                     if i <= ymin-1 or i > ymin+len(x_coordinate)-1 :
-                        result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
+                        if canvas1[i][j].sum() > canvas2[i][j].sum() :
+                            result[i][j][k] = canvas1[i][j][k]
+                        else :
+                            result[i][j][k] = canvas2[i][j][k]
                     else :
                         # 밝기가 어두우면 다른 캔버스의 픽셀로 대체하는 이유는 검은 공백을 메우기 위해서이다.
                         if j <= xmin+x_coordinate[index] :
@@ -225,7 +190,10 @@ def seam_stitching(canvas1, canvas2, x_coordinate, xmin, ymin, x_offset) :
             for j in range(len(canvas1[0])) :
                 for k in range(len(canvas1[0][0])) :
                     if i <= ymin-1 or i > ymin+len(x_coordinate)-1  :
-                        result[i][j][k] = max(canvas1[i][j][k], canvas2[i][j][k])
+                        if canvas1[i][j].sum() > canvas2[i][j].sum() :
+                            result[i][j][k] = canvas1[i][j][k]
+                        else :
+                            result[i][j][k] = canvas2[i][j][k]
                     else :
                         # 밝기가 어두우면 다른 캔버스의 픽셀로 대체하는 이유는 검은 공백을 메우기 위해서이다.
                         if j <= xmin+x_coordinate[index] :
@@ -267,44 +235,3 @@ def get_img2_canvas(shape, img2, xmin, ymin) :
                 canvas2[i+int(abs(ymin))][j+int(abs(xmin))][k] = img2[i][j][k]
     
     return canvas2
-
-def image_mirroring(canvas, shape) :
-
-    mirrored_canvas = canvas.copy()
-
-    left = 0
-    right = 0
-    top = 0
-    bottom = 0
-
-    for row in range(canvas.shape[0]) :
-        for column in range(canvas.shape[1]) :
-            if (canvas[row][column] != np.array([0, 0, 0])).any() and left == 0 :
-                for i in range(shape[1]) :
-                    if column-i >= 0 :
-                        mirrored_canvas[row][column-i] = canvas[row][column+(i)]
-                left = 1
-            elif (canvas[row][column] != np.array([0, 0, 0])).any() and right == 0 :
-                for i in range(shape[1]) :
-                    if column+shape[1]+i < canvas.shape[1] :
-                        mirrored_canvas[row][column+shape[1]+i] = canvas[row][column+shape[1]-(i)]
-                right = 1
-        left = 0
-        right = 0
-
-    for column in range(canvas.shape[1]) :
-        for row in range(canvas.shape[0]) :
-            if (canvas[row][column] != np.array([0, 0, 0])).any() and top == 0 :
-                for i in range(shape[0]) :
-                    if row-i >= 0 :
-                        mirrored_canvas[row-i][column] = canvas[row+(i)][column]
-                top = 1
-            elif (canvas[row][column] != np.array([0, 0, 0])).any() and bottom == 0 :
-                for i in range(shape[0]) :
-                    if row+shape[0]+i < canvas.shape[0] :
-                        mirrored_canvas[row+shape[0]+i][column] = canvas[row+shape[0]-(i)][column]
-                bottom = 1
-        top = 0
-        right = 0
-
-    return mirrored_canvas

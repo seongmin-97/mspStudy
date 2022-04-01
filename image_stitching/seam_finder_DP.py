@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 
 
-def seam_finder(image, draw=False) :
+def seam_finder(image, draw=False, i = 0) :
 
     pixel_energies = calculate_energy_of_image(image)
     lowest_seam_energy_map = calculate_lowest_seam_energies_map(pixel_energies)
@@ -10,7 +10,7 @@ def seam_finder(image, draw=False) :
     if draw :
         seam_image = draw_seam(image, x_coordinate)
 
-        cv2.imwrite('./seam.jpg', seam_image)
+        cv2.imwrite('./seam'+str(i)+'.jpg', seam_image)
         return x_coordinate
 
     return x_coordinate
@@ -125,6 +125,25 @@ def calculate_energy_of_image(image) :
             energy[row][column] = delta_x + delta_y
 
     return energy
+
+def get_overlap_image(canvas1, canvas2) :
+
+    overlap_mask = np.zeros_like(canvas1)
+
+    x = []
+    y = []
+
+    for i in range(len(canvas2)) :
+        for j in range(len(canvas2[0])) :
+            if (canvas1[i][j] != np.array([0, 0, 0])).any() and (canvas2[i][j] != np.array([0, 0, 0])).any() :
+                overlap_mask[i][j][:] = np.array([1, 1, 1])
+                y.append(i)
+                x.append(j)
+
+    if len(x) != 0 and len(y) != 0 :
+        return [min(x), max(x), min(y), max(y)]
+    else :
+        return []
 
 image = cv2.imread('./data/exp.jpeg')
 seam_finder(image)

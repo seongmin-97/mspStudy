@@ -3,55 +3,72 @@ import numpy as np
 
 # 두 이미지에 대해서만 가능한 코드
 
-def gain_based_esposure_compensation(canvas1, canvas2, overlap_mask) :
+def set_gain_compensations(images, pair_matches, sigma_n: float = 10.0, sigma_g: float = 0.1) -> None:
+    """
+    Compute the gain compensation for each image, and save it into the images objects.
 
-    I12, N12 = calculate_mean_intensity_overlap(overlap_mask * canvas1)
-    I21, N21 = calculate_mean_intensity_overlap(overlap_mask * canvas2)
+    Parameters
+    ----------
+    images : List[Image]
+        Images of the panorama.
+    pair_matches : List[PairMatch]
+        Pair matches between the images.
+    sigma_n : float, optional
+        Standard deviation of the normalized intensity error, by default 10.0
+    sigma_g : float, optional
+        Standard deviation of the gain, by default 0.1
+    """
+    
+    coefficients = []
+    results = []
 
-    cv2.imwrite('./c1_overlap.jpg', canvas1*overlap_mask)
-    cv2.imwrite('./c2_overlap.jpg', canvas2*overlap_mask)
-    b = calculate_b_matrix(N12, N21)
-    A = calculate_A_matrix(I12, I21, N12, N21, b)
-    g = get_gain(A, b)
+    for k, image in enumerate(images):
+        coefs = [np.zeros(3) for _ in range(len(images))]
+        result = np.zeros(3)
 
-    # canvas1에 g[0], canvas2에 g[1]을 곱해서 사용
-    return g 
+        for pair_match in pair_matches:
+            if pair_match.image_a == image:
+                coefs[k] += pair_match.area_overlap * (
+                    (2 * pair_match.Iab ** 2 / sigma_n ** 2) + (1 / sigma_g ** 2)
+                )
 
-def get_gain(A, b) :
-    return np.dot(np.linalg.inv(A), np.transpose(b))
+                i = images.index(pair_match.image_b)
+                coefs[i] -= (
+                    (2 / sigma_n ** 2) * pair_match.area_overlap * pair_match.Iab * pair_match.Iba
+                )
 
-def calculate_A_matrix(I12, I21, N12, N21, b) :
+                result += pair_match.area_overlap / sigma_g ** 2
 
-    A = np.zeros((2, 2)) 
+            elif pair_match.image_b == image:
+                coefs[k] += pair_match.area_overlap * (
+                    (2 * pair_match.Iba ** 2 / sigma_n ** 2) + (1 / sigma_g ** 2)
+                )
 
-    A[0][0] = b[0] + (0.02 * I12 ** 2 * N12)
-    A[0][1] = -0.02 * I12 * I21 * N12
-    A[1][0] = -0.02 * I21 * I12 * N21
-    A[1][1] = b[1] + (0.02 * I21 ** 2 * N21)
+                i = images.index(pair_match.image_a)
+                coefs[i] -= (
+                    (2 / sigma_n ** 2) * pair_match.area_overlap * pair_match.Iab * pair_match.Iba
+                )
 
-    return A
+                result += pair_match.area_overlap / sigma_g ** 2
 
-def calculate_b_matrix(N12, N21) :
+        coefficients.append(coefs)
+        results.append(result)
 
-    b = np.array([0, 0])
+    coefficients = np.array(coefficients)
+    results = np.array(results)
 
-    b[0] = 100 * (N12)
-    b[1] = 100 * (N21)
+    gains = np.zeros_like(results)
 
-    return b
+    for channel in range(coefficients.shape[2]):
+        coefs = coefficients[:, :, channel]
+        res = results[:, channel]
 
-def calculate_mean_intensity_overlap(overlap) :
+        gains[:, channel] = np.linalg.solve(coefs, res)
 
-    intensity = 0
-    N = 0
+    max_pixel_value = np.max([image.image for image in images])
 
-    for row in range(overlap.shape[0]) :
-        for column in range(overlap.shape[1]) :
-            intensity = intensity + calculate_intensity(overlap[row][column])
-            if (overlap[row][column] != np.array([0, 0, 0])).any() :
-                N = N + 1
+    if gains.max() * max_pixel_value > 255:
+        gains = gains / (gains.max() * max_pixel_value) * 255
 
-    return intensity / N, N
-
-def calculate_intensity(pixel) :
-    return np.sqrt(pixel[0] ** 2 + pixel[1] ** 2 + pixel[2] ** 2)
+    for i, image in enumerate(images):
+        image.gain = gains[i]
