@@ -19,7 +19,7 @@ def estimate_homography(img1, img2, NNDR=0.7, ransac_trial=500) :
 
     return H_matrix, translate_matrix, boundingBox, [matching_keypoint1, translate_keypoint(matching_keypoint2, -boundingBox[0], -boundingBox[2])]
 
-def get_seam_and_mask(img1, img2, H_matrix, mask = None, bundle = True, bounding_Box = None, i = 0) :
+def get_seam_and_mask(img1, img2, H_matrix, intermediate_result, pair, mask = None, bundle = True, bounding_Box = None, i = 0) :
 
     if bundle :
         boundingBox, _ = calculate_bounding_box_and_translate_H(img1, img2, H_matrix)
@@ -29,15 +29,14 @@ def get_seam_and_mask(img1, img2, H_matrix, mask = None, bundle = True, bounding
     canvas1 = cv2.warpPerspective(img1, H_matrix, (boundingBox[1]-boundingBox[0], boundingBox[3]-boundingBox[2]))
     canvas2 = get_img2_canvas(canvas1.shape, img2, boundingBox[0], boundingBox[2])    
 
-    # cv2.imwrite('./canvas1_'+str(i)+'.jpg', canvas1)
-    # cv2.imwrite('./canvas2_'+str(i)+'.jpg', canvas2)
-
     overlap_mask, overlap_box = sfd.get_overlap_image(canvas1, canvas2)
     # print(canvas1.shape, canvas2.shape, overlap_mask.shape, overlap_box)
     seam = sfd.seam_finder(canvas2[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]] * overlap_mask[overlap_box[2]:overlap_box[3], overlap_box[0]:overlap_box[1]]) 
-    result_mask = get_warped_mask(canvas1, canvas2, mask, H_matrix, boundingBox, seam, overlap_box)
+    result_mask = get_warped_mask(canvas1, canvas2, mask, H_matrix, pair, boundingBox, seam, overlap_box)
     stitched_image = seam_stitching(canvas1, canvas2, seam, overlap_box[0], overlap_box[2], boundingBox[0])
 
+    if intermediate_result :
+        cv2.imwrite('./intermediate_result'+str(i)+'.jpg', stitched_image)
     return stitched_image, boundingBox, result_mask
 
 def RANSAC(kp1, kp2, number_of_matching, trial) :
@@ -213,15 +212,17 @@ def get_img2_canvas(shape, img2, xmin, ymin) :
     
     return canvas2
 
-def get_warped_mask(canvas1, canvas2, mask, best_H, boundingBox, seam, overlap_box) :
+def get_warped_mask(canvas1, canvas2, mask, best_H, pair, boundingBox, seam, overlap_box) :
     # mask2는 여태까지 모든 마스크의 리스트
     # x_offset 지정
-    if mask != None  :
+    if type(mask[pair[0]]) == type(np.array([])) or type(mask[pair[1]]) == type(np.array([])) :
 
         for i in range(len(mask)) :
-            mask[i] = get_img2_canvas(canvas1.shape, mask[i], boundingBox[0], boundingBox[2])
+            if type(mask[i]) == type(np.array([])) :
+                mask[i] = get_img2_canvas(canvas1.shape, mask[i], boundingBox[0], boundingBox[2])
         
         coordinate = np.array([0, 0, 1])@best_H
+
         if boundingBox[0] < coordinate[0]:
             mask1 = get_mask(canvas1, seam, overlap_box[0], overlap_box[2], 1)
             previous_hole_mask = get_mask(canvas2, seam, overlap_box[0], overlap_box[2], 0)
@@ -230,17 +231,23 @@ def get_warped_mask(canvas1, canvas2, mask, best_H, boundingBox, seam, overlap_b
             previous_hole_mask = get_mask(canvas2, seam, overlap_box[0], overlap_box[2], 1)
         
         for i in range(len(mask)) :
-            mask[i] = cv2.bitwise_and(previous_hole_mask, mask[i])
+            if type(mask[i]) == type(np.array([])) :
+                mask[i] = cv2.bitwise_and(previous_hole_mask, mask[i])
 
-        mask.append(mask1)
+        mask[pair[1]] = mask1
+
     else :
+
         if overlap_box[0] == 0 :
             x = 1
         else :
             x = 0
+
         mask1 = get_mask(canvas1, seam, overlap_box[0], overlap_box[2], overlap_box[0])
         mask2 = get_mask(canvas2, seam, overlap_box[0], overlap_box[2], x)
-        mask = [mask1, mask2]
+        
+        mask[pair[0]] = mask1
+        mask[pair[1]] = mask2
     
     return mask
 

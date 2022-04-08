@@ -12,32 +12,40 @@ import math
 import numpy as np
 from collections import deque
 
-def image_stitching(fname_list, outputfname, NNDR=0.5, trial=500) :
+def image_stitching(fname_list, outputfname, NNDR=0.5, trial=500, compansation=True, intermediate_result=False) :
 
     img_list = read_image_list(fname_list)
     cyl_list, mirroring_cyl_list = cw.get_cylindrical_img_list(img_list)
 
     matching_graph = calculate_matching_graph(cyl_list, NNDR, trial)
-    H_matrix_list, boundingBox, mask_list = all_matching_relation_homography(cyl_list, matching_graph, NNDR, trial)
+    H_matrix_list, boundingBox, mask_list = all_matching_relation_homography(cyl_list, matching_graph, NNDR, trial, intermediate_result)
 
     print('start warping')
+    
     mirrored_warping_image = iw.image_warping(mirroring_cyl_list, H_matrix_list, boundingBox, cv2.BORDER_REFLECT)
-    warping_image = iw.image_warping(cyl_list, H_matrix_list, boundingBox, cv2.BORDER_CONSTANT)
+    if compansation :
+        warping_image = iw.image_warping(cyl_list, H_matrix_list, boundingBox, cv2.BORDER_CONSTANT)
 
-    print('start calculating gain')
-    g = gbc.gain_based_esposure_compensation(warping_image)
+        print('start calculating gain')
+        g = gbc.gain_based_esposure_compensation(warping_image)
 
-    print('start apply gain')
-    for i in range(len(g)) :
-        mirrored_warping_image[i] = mirrored_warping_image[i] * g[i]
+        print('start apply gain')
+        for i in range(len(g)) :
+            mirrored_warping_image[i] = mirrored_warping_image[i] * g[i]
 
     print('start blending')
+
+    for i in range(len(mask_list)) :
+        print(type(mask_list[i]))
+        if type(mask_list[i]) == type(np.array([])) :
+            cv2.imwrite('./mask'+str(i)+'.jpg', mask_list[i] * 255)
+
     blending_image = ib.image_blending(mirrored_warping_image, mask_list)
 
     cv2.imwrite(outputfname, blending_image)
 
 
-def all_matching_relation_homography(img_list, matching_graph, NNDR, trial) :
+def all_matching_relation_homography(img_list, matching_graph, NNDR, trial, intermediate_result) :
 
     visited = [False] * len(img_list)
     visited[0] = True
@@ -48,6 +56,10 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial) :
     warped_image = []
     
     H_matrix_list = np.zeros((len(img_list), 3, 3))
+    mask = []
+    for i in range(len(img_list)) :
+        mask.append([])
+
     i = 0
     while queue :
         img_pair = queue.popleft()
@@ -65,7 +77,7 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial) :
                 H_matrix, translate_matrix, bounding_Box, matching_pair = eh.estimate_homography(img_list[pair[0]], img_list[pair[1]], NNDR, trial)
                 # H_matrix = ba.bundle_adjustment(matching_pair, H_matrix)
                 # result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[0]], img_list[pair[1]], H_matrix, i=i)
-                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[0]], img_list[pair[1]], H_matrix, bundle=False, bounding_Box=bounding_Box, i=i)
+                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[0]], img_list[pair[1]], H_matrix, mask=mask, pair=pair, intermediate_result=intermediate_result, bundle=False, bounding_Box=bounding_Box, i=i)
 
                 H_matrix_list[pair[0]] = np.array(H_matrix)
                 H_matrix_list[pair[1]] = np.array(translate_matrix)
@@ -76,7 +88,7 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial) :
                 H_matrix, translate_matrix, bounding_Box, matching_pair = eh.estimate_homography(img_list[pair[1]], result, NNDR, trial)
                 # H_matrix = ba.bundle_adjustment(matching_pair, H_matrix)
                 # result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[1]], result, H_matrix, mask, i=i)
-                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[1]], result, H_matrix, mask, bundle=False, bounding_Box=bounding_Box, i=i)
+                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[1]], result, H_matrix, mask=mask, pair=pair, intermediate_result=intermediate_result, bundle=False, bounding_Box=bounding_Box, i=i)
 
                 for idx in warped_image :
                     H_matrix_list[idx] = translate_matrix.dot(H_matrix_list[idx])
@@ -175,7 +187,9 @@ def read_image_list(fname_list) :
     return img_list
 
 # fname_list = ['./data1/IMG_0423.jpg', './data1/IMG_0424.jpg', './data1/IMG_0422.jpg', './data1/IMG_0425.jpg', './data1/IMG_0421.jpg', './data1/IMG_0426.jpg', './data1/IMG_0420.jpg', './data1/IMG_0427.jpg']
-fname_list = ['./data/museum1.jpg', './data/museum3.jpg', './data/museum2.jpg', './data/museum4.jpg', './data/museum5.jpg']
-image_stitching(fname_list, './school_result.jpg', NNDR=0.7, trial=500)
+# fname_list = ['./data/museum1.jpg', './data/museum3.jpg', './data/museum2.jpg', './data/museum4.jpg', './data/museum5.jpg']
+fname_list = ['./data/school2.jpg', './data/school1.jpg', './data/school3.jpg', './data/school4.jpg', './data/school5.jpg', './data/school6.jpg', './data/school8.jpg']
+# image_stitching(fname_list, './school_result_no_gain_no_ba.jpg', NNDR=0.7, trial=500, compansation=False, intermediate_result=True)
+image_stitching(fname_list, './school_result.jpg', NNDR=0.7, trial=500, compansation=True)
 # fname_list = ['./data/museum5.jpg', './output1.jpg']
 # image_stitching(fname_list, './output2.jpg', NNDR=0.7, trial=500)
