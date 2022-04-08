@@ -85,12 +85,15 @@ def calculate_lowest_seam_energies_map(pixel_energies) :
 def calculate_energy_of_image(image) :
     
     image = image.astype('float32')
+
     energy = np.zeros((image.shape[0], image.shape[1]))
 
     for row in range(image.shape[0]) :
         for column in range(image.shape[1]) :
-            
-            if row == 0 and column == 0 :
+            if (image[row][column] == np.array([0, 0, 0])).all() :
+                delta_x = 10000
+                delta_y = 10000
+            elif row == 0 and column == 0 :
                 delta_x = abs(image[row][column][0] - image[row][column+1][0]) + abs(image[row][column][1] - image[row][column+1][1]) + abs(image[row][column][2] - image[row][column+1][2])
                 delta_y = abs(image[row][column][0] - image[row+1][column][0]) + abs(image[row][column][1] - image[row+1][column][1]) + abs(image[row][column][2] - image[row+1][column][2])
             elif row == 0 and column == image.shape[1] - 1 :
@@ -141,9 +144,6 @@ def get_overlap_image(canvas1, canvas2) :
                 x.append(j)
 
     if len(x) != 0 and len(y) != 0 :
-        return [min(x), max(x), min(y), max(y)]
+        return overlap_mask, [min(x), max(x), min(y), max(y)]
     else :
-        return []
-
-image = cv2.imread('./data/exp.jpeg')
-seam_finder(image)
+        return overlap_mask, []

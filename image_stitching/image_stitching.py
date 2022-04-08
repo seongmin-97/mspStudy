@@ -1,52 +1,53 @@
-import image_feature_matching as ifm
-import image_warping as iw
-import image_blending as ib
 import clindrical_warping as cw
+import image_feature_matching as ifm
+import estimate_homography as eh
+import bundle_adjustment as ba
+import image_warping as iw
+import gain_based_compensation as gbc
+import image_blending as ib
+
 
 import cv2
 import math
+import numpy as np
 from collections import deque
 
 def image_stitching(fname_list, outputfname, NNDR=0.5, trial=500) :
 
     img_list = read_image_list(fname_list)
-    
-    cyl_list = []
-    mirroring_cyl_list = []
+    cyl_list, mirroring_cyl_list = cw.get_cylindrical_img_list(img_list)
 
-    for image in img_list :
-        normal, mirroring = cw.cylindrical_projection(image)
-        cyl_list.append(normal)
-        mirroring_cyl_list.append(mirroring)
+    matching_graph = calculate_matching_graph(cyl_list, NNDR, trial)
+    H_matrix_list, boundingBox, mask_list = all_matching_relation_homography(cyl_list, matching_graph, NNDR, trial)
 
-    matching_graph, best_H = calculate_matching_graph(cyl_list, NNDR, trial)
+    print('start warping')
+    mirrored_warping_image = iw.image_warping(mirroring_cyl_list, H_matrix_list, boundingBox, cv2.BORDER_REFLECT)
+    warping_image = iw.image_warping(cyl_list, H_matrix_list, boundingBox, cv2.BORDER_CONSTANT)
 
-    print("매칭 관계 : ", matching_graph)
-    print("-------------------------------")
+    print('start calculating gain')
+    g = gbc.gain_based_esposure_compensation(warping_image)
 
-    H_matrix_list, boundingBox, mask_list = all_image_warping(cyl_list, matching_graph, NNDR, trial)
-    blending_image = ib.image_blending(mirroring_cyl_list, H_matrix_list, boundingBox, mask_list)
+    print('start apply gain')
+    for i in range(len(g)) :
+        mirrored_warping_image[i] = mirrored_warping_image[i] * g[i]
 
-def read_image_list(fname_list) :
+    print('start blending')
+    blending_image = ib.image_blending(mirrored_warping_image, mask_list)
 
-    img_list = []
-
-    for fname in fname_list :
-        img_list.append(cv2.imread(fname))
-
-    return img_list
+    cv2.imwrite(outputfname, blending_image)
 
 
-def all_image_warping(img_list, matching_graph, NNDR, trial) :
+def all_matching_relation_homography(img_list, matching_graph, NNDR, trial) :
 
     visited = [False] * len(img_list)
     visited[0] = True
     queue = deque([0])
+
     end_warping = []
     start = 0
     warped_image = []
     
-    H_matrix_list = []
+    H_matrix_list = np.zeros((len(img_list), 3, 3))
     i = 0
     while queue :
         img_pair = queue.popleft()
@@ -58,26 +59,33 @@ def all_image_warping(img_list, matching_graph, NNDR, trial) :
             # ex) [0, 3]이 완료되었으면 [3, 0]은 안해도 된다.
             if [pair[1], pair[0]] in end_warping or pair[1] in warped_image :
                 continue
+
             print(pair)
             if start == 0 :
-                result, H_matrix, translate_matrix, boundingBox, mask = iw.image_warping(img_list[pair[0]], img_list[pair[1]], NNDR, trial, i=i)
-                start = 1
+                H_matrix, translate_matrix, bounding_Box, matching_pair = eh.estimate_homography(img_list[pair[0]], img_list[pair[1]], NNDR, trial)
+                # H_matrix = ba.bundle_adjustment(matching_pair, H_matrix)
+                # result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[0]], img_list[pair[1]], H_matrix, i=i)
+                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[0]], img_list[pair[1]], H_matrix, bundle=False, bounding_Box=bounding_Box, i=i)
 
-                H_matrix_list.append(H_matrix)
-                H_matrix_list.append(translate_matrix)
+                H_matrix_list[pair[0]] = np.array(H_matrix)
+                H_matrix_list[pair[1]] = np.array(translate_matrix)
                 warped_image.append(pair[0])
                 warped_image.append(pair[1])
+                start = 1
             else :
-                result, H_matrix, translate_matrix, boundingBox, mask = iw.image_warping(img_list[pair[1]], result, NNDR, trial, mask, i=i)
+                H_matrix, translate_matrix, bounding_Box, matching_pair = eh.estimate_homography(img_list[pair[1]], result, NNDR, trial)
+                # H_matrix = ba.bundle_adjustment(matching_pair, H_matrix)
+                # result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[1]], result, H_matrix, mask, i=i)
+                result, boundingBox, mask = eh.get_seam_and_mask(img_list[pair[1]], result, H_matrix, mask, bundle=False, bounding_Box=bounding_Box, i=i)
 
                 for idx in warped_image :
                     H_matrix_list[idx] = translate_matrix.dot(H_matrix_list[idx])
 
-                H_matrix_list.append(H_matrix)
+                H_matrix_list[pair[1]] = np.array(H_matrix)
+
                 warped_image.append(pair[1])
 
             end_warping.append(pair)
-            # cv2.imwrite('./result'+str(i)+'.jpg', result)
             i += 1
         # BFS
         for data in matching_graph[img_pair] :
@@ -90,7 +98,7 @@ def all_image_warping(img_list, matching_graph, NNDR, trial) :
 def calculate_matching_graph(img_list, NNDR, trial) :
 
     matching_graph = []
-    n_f, n_i, best_H = calculate_number_of_feature_and_H(img_list, NNDR, trial)
+    n_f, n_i = calculate_number_of_feature_and_H(img_list, NNDR, trial)
 
     for i in range(len(img_list)) :
         node_info = []
@@ -101,60 +109,43 @@ def calculate_matching_graph(img_list, NNDR, trial) :
 
         matching_graph.append(node_info)
         
-    return matching_graph, best_H
+    return matching_graph
 
 def calculate_number_of_feature_and_H(img_list, NNDR, trial) :
     
     n_f = []
     n_i = []
-    best_H_list = []
-    
+
     for row in range(len(img_list)) :
         
         num_matching = []
         num_inlier = []
-        best_H_row = []
-        
+
         for column in range(len(img_list)) :
             
             if row == column :
                 num_matching.append(0)
                 num_inlier.append(0)
-                best_H_row.append([[0, 0, 0],[0, 0, 0],[0, 0, 0]])
             elif row > column :
                 num_matching.append(n_f[column][row])
                 num_inlier.append(n_i[column][row])
-
-                if n_f[column][row] < 4 :
-                    best_H_row.append([[0, 0, 0],[0, 0, 0],[0, 0, 0]])
-                else :
-                    best_H, best_inlier_num = iw.RANSAC(matching_keypoint1, matching_keypoint2, len(matching_keypoint1), trial)
-                    best_H_row.append(best_H)
             else :
                 matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img_list[row], img_list[column], NNDR)
                 
                 if number_of_matching < 4 :
                     num_matching.append(number_of_matching)
                     num_inlier.append(0)
-                    best_H_row.append([[0, 0, 0],[0, 0, 0],[0, 0, 0]])
                 else :
-                    best_H, best_inlier_num = iw.RANSAC(matching_keypoint1, matching_keypoint2, len(matching_keypoint1), trial)
-
+                    _, best_inlier_num = eh.RANSAC(matching_keypoint1, matching_keypoint2, len(matching_keypoint1), trial)
                     num_matching.append(number_of_matching)
                     num_inlier.append(best_inlier_num)
-                    best_H_row.append(best_H)
 
         n_f.append(num_matching)
         n_i.append(num_inlier)
-        best_H_list.append(best_H_row)
 
         print("피쳐 개수, H 계산 중...", (row+1)/len(img_list))
-    
-    for image in img_list :
-        kp, _ = ifm.get_feature_SIFT(image, False)
-        n_f.append(len(kp))
 
-    return n_f, n_i, best_H_list
+    return n_f, n_i
 
 def isMatching(n_f, n_i) :
     
@@ -174,9 +165,17 @@ def isMatching(n_f, n_i) :
     else :
         return False
 
+def read_image_list(fname_list) :
 
-# fname_list = ['./data1/IMG_0422.jpg', './data1/IMG_0424.jpg', './data1/IMG_0421.jpg', './data1/IMG_0425.jpg', './data1/IMG_0426.jpg', './data1/IMG_0427.jpg']
-fname_list = ['./data/museum1.jpg', './data/museum3.jpg']
-image_stitching(fname_list, './output1.jpg', NNDR=0.7, trial=500)
+    img_list = []
+
+    for fname in fname_list :
+        img_list.append(cv2.imread(fname))
+
+    return img_list
+
+# fname_list = ['./data1/IMG_0423.jpg', './data1/IMG_0424.jpg', './data1/IMG_0422.jpg', './data1/IMG_0425.jpg', './data1/IMG_0421.jpg', './data1/IMG_0426.jpg', './data1/IMG_0420.jpg', './data1/IMG_0427.jpg']
+fname_list = ['./data/museum1.jpg', './data/museum3.jpg', './data/museum2.jpg', './data/museum4.jpg', './data/museum5.jpg']
+image_stitching(fname_list, './school_result.jpg', NNDR=0.7, trial=500)
 # fname_list = ['./data/museum5.jpg', './output1.jpg']
 # image_stitching(fname_list, './output2.jpg', NNDR=0.7, trial=500)
