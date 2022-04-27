@@ -54,7 +54,8 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial, inte
     end_warping = []
     start = 0
     warped_image = []
-    
+    f = []
+
     H_matrix_list = np.zeros((len(img_list), 3, 3))
     mask = []
     for i in range(len(img_list)) :
@@ -81,6 +82,10 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial, inte
 
                 H_matrix_list[pair[0]] = np.array(H_matrix)
                 H_matrix_list[pair[1]] = np.array(translate_matrix)
+
+                # f.append(ecp.estimate_focal_from_homography(H_matrix))
+                # f.append(ecp.estimate_focal_from_homography(translate_matrix))
+
                 warped_image.append(pair[0])
                 warped_image.append(pair[1])
                 start = 1
@@ -93,6 +98,7 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial, inte
                 for idx in warped_image :
                     H_matrix_list[idx] = translate_matrix.dot(H_matrix_list[idx])
 
+                # f.append(ecp.estimate_focal_from_homography(H_matrix))
                 H_matrix_list[pair[1]] = np.array(H_matrix)
 
                 warped_image.append(pair[1])
@@ -104,6 +110,8 @@ def all_matching_relation_homography(img_list, matching_graph, NNDR, trial, inte
             if not visited[data[1]] :
                 queue.append(data[1])
                 visited[data[1]] = True
+
+    print(f)
 
     return H_matrix_list, boundingBox, mask
 
@@ -120,6 +128,8 @@ def calculate_matching_graph(img_list, NNDR, trial) :
                 node_info.append([i, j])
 
         matching_graph.append(node_info)
+
+    print("matching_graph : ", matching_graph)
         
     return matching_graph
 
@@ -187,8 +197,9 @@ def read_image_list(fname_list) :
     return img_list
 
 # fname_list = ['./data1/IMG_0423.jpg', './data1/IMG_0424.jpg', './data1/IMG_0422.jpg', './data1/IMG_0425.jpg', './data1/IMG_0421.jpg', './data1/IMG_0426.jpg', './data1/IMG_0420.jpg', './data1/IMG_0427.jpg']
+fname_list = ['./data1/IMG_0423.jpg', './data1/IMG_0420.jpg']
 # fname_list = ['./data/museum1.jpg', './data/museum3.jpg', './data/museum2.jpg', './data/museum4.jpg', './data/museum5.jpg']
-fname_list = ['./data/school2.jpg', './data/school1.jpg', './data/school3.jpg', './data/school4.jpg', './data/school5.jpg', './data/school6.jpg', './data/school8.jpg']
+# fname_list = ['./data/school2.jpg', './data/school1.jpg', './data/school3.jpg', './data/school4.jpg', './data/school5.jpg', './data/school6.jpg', './data/school8.jpg']
 # image_stitching(fname_list, './school_result_no_gain_no_ba.jpg', NNDR=0.7, trial=500, compansation=False, intermediate_result=True)
 image_stitching(fname_list, './school_result.jpg', NNDR=0.7, trial=500, compansation=True)
 # fname_list = ['./data/museum5.jpg', './output1.jpg']

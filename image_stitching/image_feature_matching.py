@@ -3,17 +3,16 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 def get_feature_SIFT(img1, showImg) :
     # 이미지 불러오기
     img1 = img1.astype(np.uint8)
     # 색상변환
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     # SIFT
-    sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.SIFT_create()
 
     kp1, des1 = sift.detectAndCompute(img1_gray, None)
-
+    print('len(kp) : ', len(kp1))
     # 출력
     if showImg :
         plt.imshow(img1)

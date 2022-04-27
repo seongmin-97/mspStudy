@@ -5,10 +5,6 @@ import cv2
 import random
 import numpy as np
 
-# translate 고려
-# sample < 4 에러
-# seam 영역 초과 에러
-# bundle 반대로 작용...?
 def estimate_homography(img1, img2, NNDR=0.7, ransac_trial=500) :
 
     matching_keypoint1, matching_keypoint2, number_of_matching = ifm.get_matching_feature(img1, img2, NNDR)
@@ -238,12 +234,12 @@ def get_warped_mask(canvas1, canvas2, mask, best_H, pair, boundingBox, seam, ove
 
     else :
 
-        if overlap_box[0] == 0 :
+        if int(boundingBox[0]) == 0 :
             x = 1
         else :
             x = 0
 
-        mask1 = get_mask(canvas1, seam, overlap_box[0], overlap_box[2], overlap_box[0])
+        mask1 = get_mask(canvas1, seam, overlap_box[0], overlap_box[2], int(boundingBox[0]))
         mask2 = get_mask(canvas2, seam, overlap_box[0], overlap_box[2], x)
         
         mask[pair[0]] = mask1
